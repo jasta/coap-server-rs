@@ -1,0 +1,69 @@
+use async_trait::async_trait;
+use coap_lite::error::MessageError;
+use coap_lite::Packet;
+use futures::{Sink, Stream};
+use std::fmt::Debug;
+use std::io;
+use std::pin::Pin;
+
+/// Generalization of the underlying CoAP transport, intended primarily to make it easy to support a
+/// wide range of protocols (TCP, DTLS, websockets, BLE, etc) but also to eventually support
+/// alternative runtime frameworks such as Embassy for embedded devices.
+#[async_trait]
+pub trait Transport {
+    type Endpoint: Debug + Send + Clone;
+
+    /// Perform the binding, that is, begin accepting new data from this transport even if
+    /// there isn't yet a handler serving the data source yet.  Note that this is not quite
+    /// the same as TcpSocket::bind which requires a loop to accept the incoming connections.  In
+    /// our case, we expect a continuous async stream of (Packet, Endpoint) pairs which distinguish
+    /// each individual socket.  The transport impl is expected to spawn new tasks for each
+    /// accepted source as necessary.
+    async fn bind(self) -> Result<BoxedFramedBinding<Self::Endpoint>, TransportError>;
+}
+
+pub type BoxedFramedBinding<Endpoint> = Pin<Box<dyn FramedBinding<Endpoint>>>;
+
+/// Trait generalizing a common feature of async libraries like tokio where a socket is exposed
+/// as both a stream and a sink.  It should be possible even for libraries that have them split
+/// to unify in the bridging layer with this crate.
+///
+/// Note that this binding is intended to generalize cases like TCP and UDP together which is why
+/// the abstraction doesn't have an additional layer for accepting an incoming connection.  For
+/// UDP there is no such concept and framed items can simply arrive at any time from any source.
+pub trait FramedBinding<Endpoint>:
+    Send
+    + Stream<Item = Result<FramedItem<Endpoint>, FramedReadError<Endpoint>>>
+    + Sink<FramedItem<Endpoint>, Error = FramedWriteError>
+{
+}
+
+/// Parsed CoAP packet coming from a remote peer, as designated by [`Endpoint`].  Note that
+/// the endpoint is delivered with each packet so that packet-oriented protocols can
+/// avoid the leaky abstraction of a "connection" to a given Endpoint.
+pub type FramedItem<Endpoint> = (Packet, Endpoint);
+
+/// Error when receiving from a remote peer.  Note that here [`Endpoint`] is optional as there may
+/// be a generic read error unrelated to any remote peer, for example if the underlying bound
+/// socket is closed.
+pub type FramedReadError<Endpoint> = (TransportError, Option<Endpoint>);
+
+/// Error when sending to a remote peer.  Note that [`Endpoint`] is omitted in this case as the
+/// endpoint is provided to the send APIs themselves so we can easily tell which peer generated
+/// the error.
+pub type FramedWriteError = TransportError;
+
+/// Generalized errors indicating a range of transport-related issues such as being unable to bind,
+/// disconnections from remote peers, malformed input, etc.  Most of these errors are non-fatal
+/// and the server can happily continue serving other customers.
+#[derive(thiserror::Error, Debug)]
+pub enum TransportError {
+    #[error("generic I/O error")]
+    IoError(#[from] Option<io::Error>),
+
+    #[error("packet was malformed")]
+    MalformedPacket(#[from] MessageError),
+
+    #[error("unspecified: {0}")]
+    Unspecified(String),
+}
