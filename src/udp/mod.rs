@@ -19,11 +19,19 @@ pub(crate) mod udp_framed_fork;
 /// you're new to CoAP.
 pub struct UdpTransport<A: ToSocketAddrs> {
     addresses: A,
+    mtu: Option<u32>,
 }
 
 impl<A: ToSocketAddrs> UdpTransport<A> {
     pub fn new(addresses: A) -> Self {
-        Self { addresses }
+        Self {
+            addresses,
+            mtu: None,
+        }
+    }
+
+    pub fn set_mtu(&mut self, mtu: u32) {
+        self.mtu = Some(mtu);
     }
 }
 
@@ -38,6 +46,7 @@ impl<A: ToSocketAddrs + Sync + Send> Transport for UdpTransport<A> {
         let binding = UdpBinding {
             framed_socket,
             local_addr,
+            mtu: self.mtu,
         };
         Ok(Box::pin(binding))
     }
@@ -48,10 +57,15 @@ struct UdpBinding {
     #[pin]
     framed_socket: UdpFramed<Codec>,
     local_addr: SocketAddr,
+    mtu: Option<u32>,
 }
 
 #[async_trait]
-impl FramedBinding<SocketAddr> for UdpBinding {}
+impl FramedBinding<SocketAddr> for UdpBinding {
+    fn mtu(&self) -> Option<u32> {
+        self.mtu
+    }
+}
 
 impl Stream for UdpBinding {
     type Item = Result<(Packet, SocketAddr), (TransportError, Option<SocketAddr>)>;

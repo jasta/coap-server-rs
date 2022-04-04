@@ -36,6 +36,10 @@ pub trait FramedBinding<Endpoint>:
     + Stream<Item = Result<FramedItem<Endpoint>, FramedReadError<Endpoint>>>
     + Sink<FramedItem<Endpoint>, Error = FramedWriteError>
 {
+    /// Access the link's MTU which can be used to determine things like the ideal block
+    /// transfer size to recommend.  If it cannot be determined by the link, a suitable
+    /// default one will be selected based on the CoAP specification.
+    fn mtu(&self) -> Option<u32>;
 }
 
 /// Parsed CoAP packet coming from a remote peer, as designated by [`Endpoint`].  Note that

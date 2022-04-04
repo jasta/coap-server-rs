@@ -7,7 +7,7 @@ use futures::{SinkExt, StreamExt};
 use log::{debug, error, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::packet_handler::PacketHandler;
+use crate::packet_handler::{IntoHandler, PacketHandler};
 use crate::transport::{FramedBinding, FramedItem, FramedReadError, Transport, TransportError};
 
 /// Primary server API to configure, bind, and ultimately run the CoAP server.
@@ -41,8 +41,12 @@ where
     /// encounters unrecoverable issues, typically due to programmer error in this crate itself
     /// or transport errors not related to a specific peer.  The intention is that this crate
     /// should be highly reliable and run indefinitely for properly configured use cases.
-    pub async fn serve(mut self, handler: Handler) -> Result<(), FatalServerError> {
-        self.handler = Some(handler);
+    pub async fn serve(
+        mut self,
+        handler: impl IntoHandler<Handler, Endpoint>,
+    ) -> Result<(), FatalServerError> {
+        let mtu = self.binding.get_ref().mtu();
+        self.handler = Some(handler.into_handler(mtu));
 
         loop {
             tokio::select! {
