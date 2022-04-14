@@ -4,6 +4,7 @@ pub use resource_builder::ResourceBuilder;
 pub use response::Response;
 
 pub mod builder;
+mod core_handler;
 mod core_link;
 pub mod error;
 pub mod handler;
@@ -13,7 +14,6 @@ pub mod request;
 mod request_type_key;
 pub mod resource_builder;
 pub mod response;
-mod core_handler;
 
 pub fn new<Endpoint>() -> AppBuilder<Endpoint> {
     AppBuilder::new()

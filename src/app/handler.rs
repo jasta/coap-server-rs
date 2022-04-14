@@ -13,9 +13,9 @@ use crate::app::builder::AppBuilder;
 use crate::app::core_handler::CoreRequestHandler;
 use crate::app::error::CoapError;
 use crate::app::path_matcher::{MatchedResult, PathMatcher};
-use crate::app::Request;
 use crate::app::request_type_key::RequestTypeKey;
 use crate::app::resource_builder::ResourceHandler;
+use crate::app::Request;
 use crate::packet_handler::PacketHandler;
 
 const DEFAULT_DISCOVERABLE: bool = true;
