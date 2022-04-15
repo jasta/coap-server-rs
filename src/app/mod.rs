@@ -20,10 +20,12 @@ pub mod resource_builder;
 mod resource_handler;
 pub mod response;
 
+/// Main starting point to build a robust CoAP-based application
 pub fn new<Endpoint>() -> AppBuilder<Endpoint> {
     AppBuilder::new()
 }
 
+/// Start builder a new resource handler
 pub fn resource<Endpoint>(path: &str) -> ResourceBuilder<Endpoint> {
     ResourceBuilder::new(path)
 }

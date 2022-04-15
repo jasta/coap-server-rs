@@ -10,6 +10,7 @@ use crate::app::request_handler::RequestHandler;
 use crate::app::request_type_key::RequestTypeKey;
 use crate::app::resource_handler::ResourceHandler;
 
+/// Configure a specific resource handler, potentially with distinct per-method handlers.
 pub struct ResourceBuilder<Endpoint> {
     path: String,
     config: ConfigBuilder,
@@ -29,26 +30,21 @@ impl<Endpoint> ResourceBuilder<Endpoint> {
         }
     }
 
-    pub fn discoverable(mut self) -> Self {
-        self.config.discoverable = Some(true);
-        self
-    }
-
+    /// See [`crate::app::AppBuilder::not_discoverable`].
     pub fn not_discoverable(mut self) -> Self {
         self.config.discoverable = Some(false);
         self
     }
 
-    pub fn block_transfer(mut self) -> Self {
-        self.config.block_transfer = Some(true);
-        self
-    }
-
+    /// See [`crate::app::AppBuilder::disable_block_transfer`].
     pub fn disable_block_transfer(mut self) -> Self {
         self.config.block_transfer = Some(false);
         self
     }
 
+    /// Add a new attribute to the CoRE Link response, assuming that this resource will be
+    /// discoverable.  For more information, see
+    /// [RFC 5785](https://datatracker.ietf.org/doc/html/rfc5785)
     pub fn link_attr(
         mut self,
         attr_name: &'static str,
@@ -58,26 +54,51 @@ impl<Endpoint> ResourceBuilder<Endpoint> {
         self
     }
 
+    /// Set a default catch-all handler if another more specific request handler does not match.
+    /// This can be useful if you wish to override the default behaviour of responding with
+    /// "4.05 Method not allowed".
     pub fn default_handler(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
         self.handler(RequestTypeKey::new_match_all(), handler)
     }
 
+    /// Set a request handler for "Get" requests.
     pub fn get(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
         self.handler(RequestType::Get.into(), handler)
     }
 
+    /// Set a request handler for "Post" requests.
     pub fn post(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
         self.handler(RequestType::Post.into(), handler)
     }
 
+    /// Set a request handler for "Put" requests.
     pub fn put(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
         self.handler(RequestType::Put.into(), handler)
     }
 
+    /// Set a request handler for "Delete" requests.
     pub fn delete(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
         self.handler(RequestType::Delete.into(), handler)
     }
 
+    /// Set a request handler for "Fetch" requests.
+    pub fn fetch(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
+        self.handler(RequestType::Fetch.into(), handler)
+    }
+
+    /// Set a request handler for "Patch" requests.
+    pub fn patch(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
+        self.handler(RequestType::Patch.into(), handler)
+    }
+
+    /// Set a request handler for "iPatch" requests.
+    pub fn ipatch(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
+        self.handler(RequestType::IPatch.into(), handler)
+    }
+
+    /// Set a request handler for arbitrary request types.  This method is provided to enable
+    /// convenient dynamic building of resource handlers, but is not preferred for most
+    /// applications.
     pub fn method_handler(
         self,
         request_type: RequestType,
@@ -95,6 +116,12 @@ impl<Endpoint> ResourceBuilder<Endpoint> {
         self
     }
 
+    /// Enable Observe support for Get and/or Fetch requests in this resource.  An `observable`
+    /// argument is required to usefully take advantage of this support which requires
+    /// callers to invoke [`crate::app::Observers::notify_change`] in order to trigger
+    /// updates to be delivered to registered observers.
+    ///
+    /// For more information, see [RFC 7641](https://datatracker.ietf.org/doc/html/rfc7641)
     pub fn observable(mut self, observable: impl ObservableResource + Send + Sync) -> Self {
         self.observable = Some(Box::new(observable));
         self.link_attr(LINK_ATTR_OBSERVABLE, ())

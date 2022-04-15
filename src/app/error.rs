@@ -4,6 +4,9 @@ use std::{error, fmt};
 use coap_lite::error::HandlingError;
 use coap_lite::ResponseType;
 
+/// Error type which can be converted to a [`crate::app::Response`] as a convenience for allowing
+/// Rust's `?` operator to work naturally in handler code without violating the protocol by
+/// failing to respond to requests.
 #[derive(Debug, Clone)]
 pub struct CoapError {
     pub code: Option<ResponseType>,
@@ -34,7 +37,7 @@ impl CoapError {
         }
     }
 
-    pub fn into_handling_error(self) -> HandlingError {
+    pub(crate) fn into_handling_error(self) -> HandlingError {
         HandlingError {
             code: self.code,
             message: self.message,
