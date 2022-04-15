@@ -17,7 +17,6 @@ tokio-util = { version = "0.7.0", features = ["codec", "net"] }
 bytes = "1.1.0"
 futures = "0.3.21"
 async-trait = "0.1.53"
-async-stream = "0.3.3"
 pin-project = "1.0.10"
 sync_wrapper = "0.1.1"
 dyn-clone = "1.0.5"
@@ -27,3 +26,6 @@ env_logger = "0.9.0"
 log = "0.4.16"
 coap-lite = "0.9.0"
 dashmap = "5.2.0"
+
+[dev-dependencies]
+async-stream = "0.3.3"

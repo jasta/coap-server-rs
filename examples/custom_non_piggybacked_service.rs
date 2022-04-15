@@ -20,6 +20,11 @@ async fn main() -> Result<(), FatalServerError> {
     server.serve(NonPiggybackedService::default()).await
 }
 
+/// Highly customized service that manually implements advanced features like not using
+/// a piggy backed response + ack in order to allow very slow running responses to not
+/// confuse clients.  These features will eventually make their way into the app-based
+/// approach (if they aren't already there!), but this provides a good example of what is
+/// possible with the lowest level API.
 #[derive(Default, Clone)]
 struct NonPiggybackedService {}
 

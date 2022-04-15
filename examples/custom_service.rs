@@ -33,6 +33,9 @@ impl Default for CountingService {
     }
 }
 
+/// It is possible to do all the raw packet handling yourself if you have some very sophisticated
+/// use case not currently covered by the generic App-based handler.  Pull requests welcome,
+/// however!
 impl PacketHandler<SocketAddr> for CountingService {
     fn handle(
         &self,
