@@ -13,8 +13,7 @@ use crate::app::builder::AppBuilder;
 use crate::app::core_handler::CoreRequestHandler;
 use crate::app::error::CoapError;
 use crate::app::path_matcher::{MatchedResult, PathMatcher};
-use crate::app::request_type_key::RequestTypeKey;
-use crate::app::resource_builder::ResourceHandler;
+use crate::app::resource_handler::ResourceHandler;
 use crate::app::Request;
 use crate::packet_handler::PacketHandler;
 
@@ -142,58 +141,16 @@ impl<Endpoint: Debug + Ord + Clone + Send + 'static> AppHandler<Endpoint> {
                 matched_index,
                 value,
             }) => {
-                let unmatched_path = Vec::from(&paths[matched_index..]);
+                let wrapped_request = Request {
+                    original: request.clone(),
+                    unmatched_path: Vec::from(&paths[matched_index..]),
+                };
 
-                let actual_handler = value
-                    .handlers
-                    .get(&RequestTypeKey::from(*request.get_method()));
-
-                match actual_handler {
-                    Some(handler) => {
-                        if !self.maybe_handle_block_request(request).await? {
-                            let original = request.clone();
-                            let response = handler
-                                .handle(Request {
-                                    unmatched_path,
-                                    original,
-                                })
-                                .await?;
-                            request.response = Some(response);
-                            let _ = self.maybe_handle_block_response(request).await?;
-                        }
-                        if let Some(ref response) = request.response {
-                            // TODO: We can avoid this clone by refactoring this a bit internally
-                            tx.send(response.message.clone()).unwrap();
-                        }
-                        Ok(())
-                    }
-                    None => Err(CoapError::method_not_allowed()),
-                }
+                value
+                    .handle(tx, wrapped_request, self.block_handler.clone())
+                    .await
             }
             None => Err(CoapError::not_found()),
-        }
-    }
-
-    async fn maybe_handle_block_request(
-        &self,
-        request: &mut CoapRequest<Endpoint>,
-    ) -> Result<bool, CoapError> {
-        if let Some(ref block_handler) = self.block_handler {
-            if block_handler.lock().await.intercept_request(request)? {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
-    async fn maybe_handle_block_response(
-        &self,
-        request: &mut CoapRequest<Endpoint>,
-    ) -> Result<bool, CoapError> {
-        if let Some(ref block_handler) = self.block_handler {
-            Ok(block_handler.lock().await.intercept_response(request)?)
-        } else {
-            Ok(false)
         }
     }
 }

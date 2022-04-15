@@ -1,24 +1,52 @@
-use crate::app::core_link::{CoreLink, LinkAttributeValue};
-use crate::app::error::CoapError;
-use crate::app::observe::ObservableResource;
-use crate::app::request::Request;
-use crate::app::request_type_key::RequestTypeKey;
-use crate::app::response::Response;
-use async_trait::async_trait;
+use std::collections::HashMap;
+
 use coap_lite::link_format::LINK_ATTR_OBSERVABLE;
 use coap_lite::RequestType;
-use dyn_clone::DynClone;
-use std::collections::HashMap;
-use std::future::Future;
+
+use crate::app::builder::ConfigBuilder;
+use crate::app::core_link::{CoreLink, LinkAttributeValue};
+use crate::app::observe::ObservableResource;
+use crate::app::request_handler::RequestHandler;
+use crate::app::request_type_key::RequestTypeKey;
+use crate::app::resource_handler::ResourceHandler;
+
+pub struct ResourceBuilder<Endpoint> {
+    path: String,
+    config: ConfigBuilder,
+    attributes: CoreLink,
+    handlers: HashMap<RequestTypeKey, Box<dyn RequestHandler<Endpoint> + Send + Sync>>,
+    observable: Option<Box<dyn ObservableResource + Send + Sync>>,
+}
 
 impl<Endpoint> ResourceBuilder<Endpoint> {
     pub fn new(path: &str) -> Self {
         Self {
             path: path.to_string(),
+            config: ConfigBuilder::default(),
             attributes: CoreLink::new(path),
             handlers: HashMap::new(),
             observable: None,
         }
+    }
+
+    pub fn discoverable(mut self) -> Self {
+        self.config.discoverable = Some(true);
+        self
+    }
+
+    pub fn not_discoverable(mut self) -> Self {
+        self.config.discoverable = Some(false);
+        self
+    }
+
+    pub fn block_transfer(mut self) -> Self {
+        self.config.block_transfer = Some(true);
+        self
+    }
+
+    pub fn disable_block_transfer(mut self) -> Self {
+        self.config.block_transfer = Some(false);
+        self
     }
 
     pub fn link_attr(
@@ -31,23 +59,39 @@ impl<Endpoint> ResourceBuilder<Endpoint> {
     }
 
     pub fn default_handler(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
-        self.handler(RequestType::UnKnown, handler)
+        self.handler(RequestTypeKey::new_match_all(), handler)
     }
 
     pub fn get(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
-        self.handler(RequestType::Get, handler)
+        self.handler(RequestType::Get.into(), handler)
+    }
+
+    pub fn post(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
+        self.handler(RequestType::Post.into(), handler)
     }
 
     pub fn put(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
-        self.handler(RequestType::Put, handler)
+        self.handler(RequestType::Put.into(), handler)
+    }
+
+    pub fn delete(self, handler: impl RequestHandler<Endpoint> + Send + Sync) -> Self {
+        self.handler(RequestType::Delete.into(), handler)
+    }
+
+    pub fn method_handler(
+        self,
+        request_type: RequestType,
+        handler: impl RequestHandler<Endpoint> + Send + Sync,
+    ) -> Self {
+        self.handler(request_type.into(), handler)
     }
 
     fn handler(
         mut self,
-        request_type: RequestType,
+        key: RequestTypeKey,
         handler: impl RequestHandler<Endpoint> + Send + Sync,
     ) -> Self {
-        self.handlers.insert(request_type.into(), Box::new(handler));
+        self.handlers.insert(key, Box::new(handler));
         self
     }
 
@@ -57,10 +101,15 @@ impl<Endpoint> ResourceBuilder<Endpoint> {
     }
 
     pub(crate) fn build(self) -> Resource<Endpoint> {
-        let discoverable = DiscoverableResource::from(self.attributes);
+        let discoverable = if self.config.discoverable.unwrap_or(true) {
+            Some(DiscoverableResource::from(self.attributes))
+        } else {
+            None
+        };
         let handler = ResourceHandler {
             handlers: self.handlers,
             observable: self.observable,
+            disable_block_transfer: self.config.block_transfer.unwrap_or(true),
         };
         Resource {
             path: self.path,
@@ -82,57 +131,10 @@ pub(crate) struct DiscoverableResource {
     pub attributes_as_string: Vec<(&'static str, String)>,
 }
 
-pub struct ResourceBuilder<Endpoint> {
-    path: String,
-    attributes: CoreLink,
-    handlers: HashMap<RequestTypeKey, Box<dyn RequestHandler<Endpoint> + Send + Sync>>,
-    observable: Option<Box<dyn ObservableResource + Send + Sync>>,
-}
-
 pub(crate) struct Resource<Endpoint> {
     pub path: String,
-    pub discoverable: DiscoverableResource,
+    pub discoverable: Option<DiscoverableResource>,
     pub handler: ResourceHandler<Endpoint>,
-}
-
-#[async_trait]
-pub trait RequestHandler<Endpoint>: DynClone + 'static {
-    async fn handle(&self, request: Request<Endpoint>) -> Result<Response, CoapError>;
-}
-
-#[async_trait]
-impl<Endpoint, F, R> RequestHandler<Endpoint> for F
-where
-    Endpoint: Send + Sync + 'static,
-    F: Fn(Request<Endpoint>) -> R + Sync + Send + Clone + 'static,
-    R: Future<Output = Result<Response, CoapError>> + Send,
-{
-    async fn handle(&self, request: Request<Endpoint>) -> Result<Response, CoapError> {
-        (self)(request).await
-    }
-}
-
-pub(crate) struct ResourceHandler<Endpoint> {
-    pub handlers: HashMap<RequestTypeKey, Box<dyn RequestHandler<Endpoint> + Send + Sync>>,
-    pub observable: Option<Box<dyn ObservableResource + Send + Sync>>,
-}
-
-impl<Endpoint> Clone for ResourceHandler<Endpoint> {
-    fn clone(&self) -> Self {
-        let handlers: HashMap<_, _> = self
-            .handlers
-            .iter()
-            .map(|(req_type, handler)| (*req_type, dyn_clone::clone_box(handler.as_ref())))
-            .collect();
-        let observable = self
-            .observable
-            .as_ref()
-            .map(|x| dyn_clone::clone_box(x.as_ref()));
-        Self {
-            handlers,
-            observable,
-        }
-    }
 }
 
 dyn_clone::clone_trait_object!(<Endpoint> RequestHandler<Endpoint>);

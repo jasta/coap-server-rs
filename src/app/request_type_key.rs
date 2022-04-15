@@ -17,3 +17,9 @@ impl From<RequestType> for RequestTypeKey {
         })
     }
 }
+
+impl RequestTypeKey {
+    pub fn new_match_all() -> Self {
+        Self(0)
+    }
+}

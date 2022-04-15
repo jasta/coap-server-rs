@@ -5,7 +5,8 @@ use coap_lite::{ContentFormat, ResponseType};
 
 use crate::app::builder::AppBuilder;
 use crate::app::error::CoapError;
-use crate::app::resource_builder::{DiscoverableResource, RequestHandler};
+use crate::app::request_handler::RequestHandler;
+use crate::app::resource_builder::DiscoverableResource;
 use crate::app::{Request, ResourceBuilder, Response};
 
 #[derive(Clone)]

@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 use crate::app::handler::AppHandler;
-use crate::app::resource_builder::{DiscoverableResource, ResourceHandler};
+use crate::app::resource_builder::DiscoverableResource;
+use crate::app::resource_handler::ResourceHandler;
 use crate::app::ResourceBuilder;
 use crate::packet_handler::IntoHandler;
 
@@ -55,7 +56,9 @@ impl<Endpoint> AppBuilder<Endpoint> {
 
     pub fn resource(mut self, resource: ResourceBuilder<Endpoint>) -> Self {
         let built = resource.build();
-        self.discoverable_resources.push(built.discoverable);
+        if let Some(discoverable) = built.discoverable {
+            self.discoverable_resources.push(discoverable);
+        }
         self.resources_by_path.insert(built.path, built.handler);
         self
     }

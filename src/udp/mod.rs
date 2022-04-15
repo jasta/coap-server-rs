@@ -30,6 +30,7 @@ impl<A: ToSocketAddrs> UdpTransport<A> {
         }
     }
 
+    /// Manually set the MTU that will be used for block-wise transfer handling purposes.
     pub fn set_mtu(&mut self, mtu: u32) {
         self.mtu = Some(mtu);
     }

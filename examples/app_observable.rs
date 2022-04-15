@@ -25,15 +25,6 @@ fn build_router() -> AppBuilder<SocketAddr> {
     let state_for_get = counter_state.clone();
     let state_for_put = counter_state.clone();
     app::new()
-        // Cascades default discoverability via the special "/.well-known/core" path.
-        .discoverable()
-        // Cascades block transfer handling as well
-        .block_transfer()
-        .resource(
-            app::resource("/hello")
-                .link_attr(LINK_ATTR_RESOURCE_TYPE, "hello")
-                .get(handle_get_hello),
-        )
         .resource(
             app::resource("/counter")
                 .link_attr(LINK_ATTR_RESOURCE_TYPE, "counter")
@@ -44,18 +35,6 @@ fn build_router() -> AppBuilder<SocketAddr> {
             app::resource("/counter/inc")
                 .put(move |req| handle_put_counter_inc(req, state_for_put.clone())),
         )
-}
-
-async fn handle_get_hello(request: Request<SocketAddr>) -> Result<Response, CoapError> {
-    let whom = request
-        .unmatched_path
-        .get(1)
-        .cloned()
-        .unwrap_or_else(|| "world".to_string());
-
-    let mut response = request.new_response();
-    response.message.payload = format!("Hello, {whom}").into_bytes();
-    Ok(response)
 }
 
 #[derive(Clone)]

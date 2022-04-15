@@ -25,7 +25,9 @@ where
 }
 
 impl<Handler, Endpoint> IntoHandler<Handler, Endpoint> for Handler
-where Handler: PacketHandler<Endpoint> + Send + 'static {
+where
+    Handler: PacketHandler<Endpoint> + Send + 'static,
+{
     fn into_handler(self, _mtu: Option<u32>) -> Handler {
         self
     }

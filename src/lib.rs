@@ -1,6 +1,7 @@
 extern crate core;
 
 pub use server::CoapServer;
+pub use server::FatalServerError;
 pub use udp::UdpTransport;
 
 pub mod app;
