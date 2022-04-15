@@ -4,7 +4,6 @@
 //! ```no_run
 //! use std::net::SocketAddr;
 //!
-//! use coap_lite::link_format::LINK_ATTR_RESOURCE_TYPE;
 //! use coap_server::app::{CoapError, Request, Response};
 //! use coap_server::{app, CoapServer, FatalServerError, UdpTransport};
 //!
