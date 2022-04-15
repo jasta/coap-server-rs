@@ -64,6 +64,6 @@ async fn handle_get_hello(request: Request<SocketAddr>) -> Result<Response, Coap
   I used but outgrew when I needed more robust features like generic Observe
   support and /.well-known/core filtering.
 - [ryankurte/rust-coap-client](https://raw.githubusercontent.com/ryankurte/rust-coap-client):
-  inspired the creation of this crate based on his excellent generalization of
+  inspired the creation of this crate based on the excellent generalization of
   client backends
 - [google/rust-async-coap](https://github.com/google/rust-async-coap)
