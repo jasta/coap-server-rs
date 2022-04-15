@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use coap_lite::link_format::LINK_ATTR_OBSERVABLE;
 use coap_lite::RequestType;
 
-use crate::app::builder::ConfigBuilder;
+use crate::app::app_builder::ConfigBuilder;
 use crate::app::core_link::{CoreLink, LinkAttributeValue};
 use crate::app::observe::ObservableResource;
 use crate::app::request_handler::RequestHandler;

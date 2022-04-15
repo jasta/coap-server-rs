@@ -9,7 +9,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::Mutex;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::app::builder::AppBuilder;
+use crate::app::app_builder::AppBuilder;
 use crate::app::core_handler::CoreRequestHandler;
 use crate::app::error::CoapError;
 use crate::app::path_matcher::{MatchedResult, PathMatcher};

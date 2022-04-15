@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use crate::app::handler::AppHandler;
+use crate::app::app_handler::AppHandler;
 use crate::app::resource_builder::DiscoverableResource;
 use crate::app::resource_handler::ResourceHandler;
 use crate::app::ResourceBuilder;

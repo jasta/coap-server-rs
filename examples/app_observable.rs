@@ -5,12 +5,12 @@ use std::sync::Arc;
 use coap_lite::link_format::LINK_ATTR_RESOURCE_TYPE;
 use tokio::sync::Mutex;
 
-use coap_server::app::builder::AppBuilder;
-use coap_server::app::error::CoapError;
-use coap_server::app::observe::{ObservableResource, Observers};
-use coap_server::app::request::Request;
-use coap_server::app::response::Response;
-use coap_server::server::FatalServerError;
+use coap_server::app::AppBuilder;
+use coap_server::app::CoapError;
+use coap_server::app::{ObservableResource, Observers};
+use coap_server::app::Request;
+use coap_server::app::Response;
+use coap_server::FatalServerError;
 use coap_server::{app, CoapServer, UdpTransport};
 
 #[tokio::main]

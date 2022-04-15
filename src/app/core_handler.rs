@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use coap_lite::{ContentFormat, ResponseType};
 
-use crate::app::builder::AppBuilder;
+use crate::app::app_builder::AppBuilder;
 use crate::app::error::CoapError;
 use crate::app::request_handler::RequestHandler;
 use crate::app::resource_builder::DiscoverableResource;
