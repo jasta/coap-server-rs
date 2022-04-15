@@ -41,8 +41,7 @@ pub enum MulticastGroupJoin {
 
 impl<A: ToSocketAddrs> UdpTransport<A> {
     pub fn new(addresses: A) -> Self {
-        let (mtu, multicast, multicast_joiner) =
-            Default::default();
+        let (mtu, multicast, multicast_joiner) = Default::default();
         Self {
             addresses,
             mtu,
@@ -121,9 +120,7 @@ impl MulticastJoiner {
                     socket.join_multicast_v4(addr, resolved_interface)?;
                 }
                 MulticastGroupJoin::Ipv6(addr, interface) => {
-                    let resolved_interface = interface
-                        .or(self.default_ipv6_interface)
-                        .unwrap_or(0);
+                    let resolved_interface = interface.or(self.default_ipv6_interface).unwrap_or(0);
                     socket.join_multicast_v6(&addr, resolved_interface)?;
                 }
             }
@@ -136,7 +133,10 @@ impl MulticastJoiner {
         let mut joins = Vec::new();
         match socket.local_addr()? {
             SocketAddr::V4(_) => {
-                joins.push(MulticastGroupJoin::Ipv4("224.0.1.187".parse().unwrap(), None));
+                joins.push(MulticastGroupJoin::Ipv4(
+                    "224.0.1.187".parse().unwrap(),
+                    None,
+                ));
             }
             SocketAddr::V6(_) => {
                 joins.push(MulticastGroupJoin::Ipv6("ff02::fd".parse().unwrap(), None));

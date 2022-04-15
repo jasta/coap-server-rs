@@ -8,6 +8,7 @@ pub use response::Response;
 
 pub mod app_builder;
 pub mod app_handler;
+mod coap_utils;
 mod core_handler;
 mod core_link;
 pub mod error;
@@ -19,7 +20,6 @@ mod request_type_key;
 pub mod resource_builder;
 mod resource_handler;
 pub mod response;
-mod coap_utils;
 
 /// Main starting point to build a robust CoAP-based application
 pub fn new<Endpoint>() -> AppBuilder<Endpoint> {

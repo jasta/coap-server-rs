@@ -54,7 +54,7 @@ impl<Endpoint: Send + 'static> RequestHandler<Endpoint> for CoreRequestHandler {
 fn filter_by_query(resource: &DiscoverableResource, queries: &HashMap<String, String>) -> bool {
     for (key, value) in queries {
         if Some(value) != resource.attributes_as_string.get(key.as_str()) {
-            return false
+            return false;
         }
     }
     true

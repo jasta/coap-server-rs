@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use crate::app::resource_builder::DiscoverableResource;
 use coap_lite::link_format::{LinkAttributeWrite, LinkFormatWrite};
 use coap_lite::ContentFormat;
 use dyn_clone::DynClone;
+use std::collections::HashMap;
 use std::fmt::{Debug, Error, Write};
 
 #[derive(Default, Debug)]

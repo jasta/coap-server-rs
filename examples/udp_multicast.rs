@@ -9,17 +9,15 @@ async fn main() -> Result<(), FatalServerError> {
     env_logger::init();
 
     // Try `coap-client -B 5 -N -m get coap://224.0.1.187/.well-known/core`.
-    let transport = UdpTransport::new("0.0.0.0:5683")
-        .enable_multicast();
+    let transport = UdpTransport::new("0.0.0.0:5683").enable_multicast();
     let server = CoapServer::bind(transport).await?;
     server
         .serve(
-            app::new()
-                .resource(
-                    app::resource("/hello")
-                        .link_attr(LINK_ATTR_RESOURCE_TYPE, "hello")
-                        .get(handle_get_hello),
-                )
+            app::new().resource(
+                app::resource("/hello")
+                    .link_attr(LINK_ATTR_RESOURCE_TYPE, "hello")
+                    .get(handle_get_hello),
+            ),
         )
         .await
 }
