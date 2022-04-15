@@ -10,7 +10,7 @@ ergonomic API for larger scale applications, inspired by warp and actix.
   shorter running ones at scale.
 * **Feature-rich**: Supports a wide range of CoAP server features including
   [Observe](https://datatracker.ietf.org/doc/html/rfc7641), and [Block-wise
-  Transfer](https://datatracker.ietf.org/doc/html/rfc7959)
+  Transfer](https://datatracker.ietf.org/doc/html/rfc7959).
 * **Flexible**: Supports pluggable transport backends with goals of supporting
   alternative async runtimes like
   [embassy](https://github.com/embassy-rs/embassy).
