@@ -17,10 +17,10 @@ use coap_server::{app, CoapServer, UdpTransport};
 async fn main() -> Result<(), FatalServerError> {
     env_logger::init();
     let server = CoapServer::bind(UdpTransport::new("0.0.0.0:5683")).await?;
-    server.serve(build_router()).await
+    server.serve(build_app()).await
 }
 
-fn build_router() -> AppBuilder<SocketAddr> {
+fn build_app() -> AppBuilder<SocketAddr> {
     let counter_state = CounterState::default();
     let state_for_get = counter_state.clone();
     let state_for_put = counter_state.clone();
