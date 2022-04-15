@@ -155,7 +155,7 @@ pub(crate) struct DiscoverableResource {
 
     /// Attributes converted to Strings that can be efficiently compared with query parameters
     /// we might get in a filter request like `GET /.well-known/core?rt=foo`
-    pub attributes_as_string: Vec<(&'static str, String)>,
+    pub attributes_as_string: HashMap<&'static str, String>,
 }
 
 pub(crate) struct Resource<Endpoint> {

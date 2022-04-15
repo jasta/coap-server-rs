@@ -19,6 +19,7 @@ mod request_type_key;
 pub mod resource_builder;
 mod resource_handler;
 pub mod response;
+mod coap_utils;
 
 /// Main starting point to build a robust CoAP-based application
 pub fn new<Endpoint>() -> AppBuilder<Endpoint> {

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::app::resource_builder::DiscoverableResource;
 use coap_lite::link_format::{LinkAttributeWrite, LinkFormatWrite};
 use coap_lite::ContentFormat;
@@ -47,7 +48,7 @@ impl CoreLink {
 impl From<CoreLink> for DiscoverableResource {
     fn from(src: CoreLink) -> Self {
         let link_str = src.format_single_link();
-        let attributes_as_string: Vec<_> = src
+        let attributes_as_string: HashMap<_, _> = src
             .attributes
             .into_iter()
             .map(|(k, v)| (k, v.format_for_comparison()))
