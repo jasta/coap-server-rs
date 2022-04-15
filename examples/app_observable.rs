@@ -7,9 +7,9 @@ use tokio::sync::Mutex;
 
 use coap_server::app::AppBuilder;
 use coap_server::app::CoapError;
-use coap_server::app::{ObservableResource, Observers};
 use coap_server::app::Request;
 use coap_server::app::Response;
+use coap_server::app::{ObservableResource, Observers};
 use coap_server::FatalServerError;
 use coap_server::{app, CoapServer, UdpTransport};
 

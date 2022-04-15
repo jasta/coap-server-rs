@@ -1,16 +1,16 @@
 pub use app_builder::AppBuilder;
 pub use error::CoapError;
+pub use observe::ObservableResource;
+pub use observe::Observers;
 pub use request::Request;
 pub use resource_builder::ResourceBuilder;
 pub use response::Response;
-pub use observe::Observers;
-pub use observe::ObservableResource;
 
 pub mod app_builder;
+pub mod app_handler;
 mod core_handler;
 mod core_link;
 pub mod error;
-pub mod app_handler;
 pub mod observe;
 mod path_matcher;
 pub mod request;
