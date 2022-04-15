@@ -1,8 +1,5 @@
 extern crate core;
 
-// pub use request_handler::ResponseBehaviour;
-// pub use request_handler::SimpleRequestHandler;
-// pub use request_handler::to_raw;
 pub use server::CoapServer;
 pub use udp::UdpTransport;
 
