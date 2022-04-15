@@ -1,9 +1,14 @@
 [package]
 name = "coap-server"
 version = "0.1.0"
+description = "Robust async CoAP server"
+authors = ["Josh Guilfoyle <jasta@devtcg.org>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/jasta/coap-server-rs"
+categories = ["network-programming"]
+keywords = ["coap", "server", "async", "IoT"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
