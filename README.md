@@ -20,7 +20,7 @@ ergonomic API for larger scale applications, inspired by warp and actix.
 [![GitHub tag](https://img.shields.io/github/tag/jasta/coap-server-rs.svg)](https://github.com/jasta/coap-server-rs)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/tokio-rs/tokio/blob/master/LICENSE)
 
-This project is a work in progress, attempting to provide a more rich codebase for further development.
+This project is a work in progress, attempting to provide a more rich codebase for further development.  See [Project Status](https://github.com/jasta/coap-server-rs/issues/1) tracking issue for more info.
 
 ## Related Projects
 
