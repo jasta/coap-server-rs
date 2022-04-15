@@ -56,6 +56,13 @@ async fn handle_get_hello(request: Request<SocketAddr>) -> Result<Response, Coap
 }
 ```
 
+To experiment, I recommend using the excellent [coap-client](https://libcoap.net/doc/reference/develop/man_coap-client.html) command-line tool, as with:
+
+```
+$ coap-client -m get coap://localhost/hello
+Hello, world
+```
+
 ## Related Projects
 
 - [martindisch/coap-lite](https://github.com/martindisch/coap-lite): used by
