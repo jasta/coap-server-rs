@@ -1,7 +1,9 @@
 # Robust, ergonomic Rust CoAP server
 
 An asynchronous [CoAP](https://coap.technology/) server with a modern and
-ergonomic API for larger scale applications, inspired by warp and actix.
+ergonomic API for larger scale applications, inspired by warp and actix.  CoAP
+offers an excellent alternative to HTTP for resource constrained environments
+like IoT devices.
 
 * **Ergonomic**: Fluent app-builder API makes it easy to compose rich
   applications, including those that use more advanced CoAP features.
