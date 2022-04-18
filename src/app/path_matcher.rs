@@ -1,19 +1,22 @@
-use dashmap::{DashMap, ReadOnlyView};
 use std::collections::HashMap;
 
+/// Lookup mechanism that uses inexact matching of input paths by finding the most specific
+/// match and returning that instead.  See [`PathMatcher::lookup`] for more information.
 pub struct PathMatcher<V> {
-    map: ReadOnlyView<Vec<String>, V>,
+    map: HashMap<Vec<String>, V>,
 }
 
 impl<V> FromIterator<(Vec<String>, V)> for PathMatcher<V> {
     fn from_iter<I: IntoIterator<Item = (Vec<String>, V)>>(iter: I) -> Self {
         Self {
-            map: DashMap::from_iter(iter).into_read_only(),
+            map: HashMap::from_iter(iter),
         }
     }
 }
 
 impl<V> PathMatcher<V> {
+    /// Convert canonical path strings into the more efficient PathMatcher variation.  Input paths
+    /// are expected to be in the form of "/foo/bar".
     pub fn from_path_strings(src: HashMap<String, V>) -> Self {
         let iter = src.into_iter().map(|(k, v)| {
             let new_key: Vec<_> = k
@@ -26,6 +29,8 @@ impl<V> PathMatcher<V> {
         Self::from_iter(iter)
     }
 
+    /// Finds the most specific matched result based on the provided input path.  Does not
+    /// require an exact match of input path!  See [`MatchedResult`] for more information.
     pub fn lookup(&self, path: &[String]) -> Option<MatchedResult<V>> {
         for search_depth in (0..path.len() + 1).rev() {
             let search_path = &path[0..search_depth];
@@ -40,6 +45,10 @@ impl<V> PathMatcher<V> {
     }
 }
 
+/// Looked up value but also the index at which the match occurred so that the caller can determine
+/// how much of the input path was unmatched and considered "dangling".  For example, the input
+/// path could be `["foo","bar"]` but the match was for `["foo"]`.  The `matched_index` would be 1
+/// such that `&input[matched_index..]` would yield `["bar"]`.
 pub struct MatchedResult<'a, V> {
     pub value: &'a V,
     pub matched_index: usize,

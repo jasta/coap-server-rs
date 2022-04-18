@@ -1,12 +1,15 @@
-use std::mem;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
+use async_trait::async_trait;
 use coap_lite::link_format::LINK_ATTR_RESOURCE_TYPE;
-use tokio::sync::Mutex;
+use log::info;
+use tokio::sync::{oneshot, Mutex};
+use tokio::time;
 
-use coap_server::app::{AppBuilder, CoapError, Request, Response};
-use coap_server::app::{ObservableResource, Observers};
+use coap_server::app::ObservableResource;
+use coap_server::app::{AppBuilder, CoapError, Observers, ObserversHolder, Request, Response};
 use coap_server::FatalServerError;
 use coap_server::{app, CoapServer, UdpTransport};
 
@@ -25,6 +28,9 @@ fn build_app() -> AppBuilder<SocketAddr> {
         .resource(
             app::resource("/counter")
                 .link_attr(LINK_ATTR_RESOURCE_TYPE, "counter")
+                // Try `coap-client -s 10 -m get coap://localhost/counter`.  You can also
+                // in parallel run `coap-client -m put coap://localhost/counter/inc` to show the
+                // values increment in response to user behaviour.
                 .observable(counter_state)
                 .get(move |req| handle_get_counter(req, state_for_get.clone())),
         )
@@ -34,28 +40,38 @@ fn build_app() -> AppBuilder<SocketAddr> {
         )
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 struct CounterState {
     counter: Arc<Mutex<u32>>,
-    observers: Option<Observers>,
+    observers: ObserversHolder,
 }
 
-impl Default for CounterState {
-    fn default() -> Self {
-        Self {
-            counter: Arc::new(Mutex::new(0)),
-            observers: None,
-        }
-    }
-}
-
+#[async_trait]
 impl ObservableResource for CounterState {
-    fn on_first_observer(&mut self, observers: Observers) {
-        self.observers = Some(observers);
-    }
-
-    fn on_last_observer(&mut self) -> Observers {
-        mem::take(&mut self.observers).unwrap()
+    async fn on_active(&self, observers: Observers) -> Observers {
+        info!("Observe active...");
+        self.observers.attach(observers).await;
+        let (tx, mut rx) = oneshot::channel();
+        let counter = self.counter.clone();
+        let observers = self.observers.clone();
+        tokio::spawn(async move {
+            let mut interval = time::interval(Duration::from_secs(1));
+            loop {
+                tokio::select! {
+                    _ = &mut rx => {
+                       return
+                    }
+                    _ = interval.tick() => {
+                        *counter.lock().await += 1;
+                        observers.notify_change().await;
+                    }
+                }
+            }
+        });
+        self.observers.stay_active().await;
+        tx.send(()).unwrap();
+        info!("Observe no longer active!");
+        self.observers.detach().await
     }
 }
 
@@ -65,7 +81,7 @@ async fn handle_get_counter(
 ) -> Result<Response, CoapError> {
     let count = *state.counter.lock().await;
     let mut response = request.new_response();
-    response.message.payload = format!("{count}").into_bytes();
+    response.message.payload = format!("{count}\n").into_bytes();
     Ok(response)
 }
 
@@ -77,8 +93,6 @@ async fn handle_put_counter_inc(
         let mut count = state.counter.lock().await;
         *count += 1;
     }
-    if let Some(observers) = state.observers {
-        observers.notify_change();
-    }
+    state.observers.notify_change().await;
     Ok(request.new_response())
 }

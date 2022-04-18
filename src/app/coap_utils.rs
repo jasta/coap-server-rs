@@ -2,9 +2,18 @@ use std::collections::HashMap;
 
 use coap_lite::error::IncompatibleOptionValueFormat;
 use coap_lite::option_value::OptionValueType;
-use coap_lite::{CoapOption, CoapRequest};
+use coap_lite::{CoapOption, CoapRequest, MessageClass, MessageType, Packet};
 
 use crate::app::CoapError;
+
+pub fn new_pong_message(ping: &Packet) -> Packet {
+    let mut pong = Packet::new();
+
+    pong.header.set_type(MessageType::Reset);
+    pong.header.code = MessageClass::Empty;
+    pong.header.message_id = ping.header.message_id;
+    pong
+}
 
 pub fn request_get_queries<Endpoint>(request: &CoapRequest<Endpoint>) -> HashMap<String, String> {
     request

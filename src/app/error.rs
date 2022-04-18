@@ -14,7 +14,7 @@ pub struct CoapError {
 }
 
 impl CoapError {
-    pub fn internal_error(msg: impl ToString) -> Self {
+    pub fn internal(msg: impl ToString) -> Self {
         Self::for_code(ResponseType::InternalServerError, msg)
     }
 

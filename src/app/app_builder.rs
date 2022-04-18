@@ -1,17 +1,14 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 use crate::app::app_handler::AppHandler;
-use crate::app::resource_builder::DiscoverableResource;
-use crate::app::resource_handler::ResourceHandler;
 use crate::app::ResourceBuilder;
 use crate::packet_handler::IntoHandler;
 
 /// Main builder API to configure how the CoAP server should respond to requests
-pub struct AppBuilder<Endpoint> {
+pub struct AppBuilder<Endpoint: Ord + Clone> {
     pub(crate) config: ConfigBuilder,
-    pub(crate) discoverable_resources: Vec<DiscoverableResource>,
-    pub(crate) resources_by_path: HashMap<String, ResourceHandler<Endpoint>>,
+    pub(crate) resources: Vec<ResourceBuilder<Endpoint>>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -20,17 +17,16 @@ pub(crate) struct ConfigBuilder {
     pub block_transfer: Option<bool>,
 }
 
-impl<Endpoint> Default for AppBuilder<Endpoint> {
+impl<Endpoint: Ord + Clone> Default for AppBuilder<Endpoint> {
     fn default() -> Self {
         Self {
             config: ConfigBuilder::default(),
-            discoverable_resources: Vec::new(),
-            resources_by_path: HashMap::new(),
+            resources: Vec::new(),
         }
     }
 }
 
-impl<Endpoint> AppBuilder<Endpoint> {
+impl<Endpoint: Ord + Clone> AppBuilder<Endpoint> {
     pub fn new() -> Self {
         Default::default()
     }
@@ -82,11 +78,7 @@ impl<Endpoint> AppBuilder<Endpoint> {
 
     /// Add a resource handler to the app by the configured path.
     pub fn resource(mut self, resource: ResourceBuilder<Endpoint>) -> Self {
-        let built = resource.build();
-        if let Some(discoverable) = built.discoverable {
-            self.discoverable_resources.push(discoverable);
-        }
-        self.resources_by_path.insert(built.path, built.handler);
+        self.resources.push(resource);
         self
     }
 
@@ -99,8 +91,8 @@ impl<Endpoint> AppBuilder<Endpoint> {
     }
 }
 
-impl<Endpoint: Debug + Ord + Clone + Send + 'static> IntoHandler<AppHandler<Endpoint>, Endpoint>
-    for AppBuilder<Endpoint>
+impl<Endpoint: Debug + Clone + Ord + Eq + Hash + Send + 'static>
+    IntoHandler<AppHandler<Endpoint>, Endpoint> for AppBuilder<Endpoint>
 {
     fn into_handler(self, mtu: Option<u32>) -> AppHandler<Endpoint> {
         AppHandler::from_builder(self, mtu)

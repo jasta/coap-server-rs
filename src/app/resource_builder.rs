@@ -1,17 +1,24 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
+use std::hash::Hash;
+use std::sync::Arc;
 
 use coap_lite::link_format::LINK_ATTR_OBSERVABLE;
 use coap_lite::RequestType;
+use tokio::sync::Mutex;
 
 use crate::app::app_builder::ConfigBuilder;
+use crate::app::block_handler_util::new_block_handler;
 use crate::app::core_link::{CoreLink, LinkAttributeValue};
-use crate::app::observe::ObservableResource;
+use crate::app::observable_resource::ObservableResource;
+use crate::app::observe_handler::ObserveHandler;
 use crate::app::request_handler::RequestHandler;
 use crate::app::request_type_key::RequestTypeKey;
 use crate::app::resource_handler::ResourceHandler;
+use crate::app::retransmission_manager::RetransmissionManager;
 
 /// Configure a specific resource handler, potentially with distinct per-method handlers.
-pub struct ResourceBuilder<Endpoint> {
+pub struct ResourceBuilder<Endpoint: Ord + Clone> {
     path: String,
     config: ConfigBuilder,
     attributes: CoreLink,
@@ -19,7 +26,7 @@ pub struct ResourceBuilder<Endpoint> {
     observable: Option<Box<dyn ObservableResource + Send + Sync>>,
 }
 
-impl<Endpoint> ResourceBuilder<Endpoint> {
+impl<Endpoint: Debug + Clone + Eq + Hash + Ord> ResourceBuilder<Endpoint> {
     pub fn new(path: &str) -> Self {
         Self {
             path: path.to_string(),
@@ -127,16 +134,32 @@ impl<Endpoint> ResourceBuilder<Endpoint> {
         self.link_attr(LINK_ATTR_OBSERVABLE, ())
     }
 
-    pub(crate) fn build(self) -> Resource<Endpoint> {
+    pub(crate) fn build(self, params: BuildParameters<Endpoint>) -> Resource<Endpoint> {
         let discoverable = if self.config.discoverable.unwrap_or(true) {
             Some(DiscoverableResource::from(self.attributes))
         } else {
             None
         };
+
+        let observe_handler = self
+            .observable
+            .map(|x| Arc::new(Mutex::new(ObserveHandler::new(x))));
+
+        let block_transfer = self
+            .config
+            .block_transfer
+            .unwrap_or(crate::app::app_handler::DEFAULT_BLOCK_TRANSFER);
+        let block_handler = if block_transfer {
+            Some(Arc::new(Mutex::new(new_block_handler(params.mtu))))
+        } else {
+            None
+        };
+
         let handler = ResourceHandler {
             handlers: self.handlers,
-            observable: self.observable,
-            disable_block_transfer: self.config.block_transfer.unwrap_or(true),
+            observe_handler,
+            block_handler,
+            retransmission_manager: params.retransmission_manager,
         };
         Resource {
             path: self.path,
@@ -144,6 +167,12 @@ impl<Endpoint> ResourceBuilder<Endpoint> {
             handler,
         }
     }
+}
+
+#[derive(Clone)]
+pub(crate) struct BuildParameters<Endpoint: Debug + Clone + Eq + Hash> {
+    pub mtu: Option<u32>,
+    pub retransmission_manager: Arc<Mutex<RetransmissionManager<Endpoint>>>,
 }
 
 #[derive(Clone)]
@@ -158,10 +187,8 @@ pub(crate) struct DiscoverableResource {
     pub attributes_as_string: HashMap<&'static str, String>,
 }
 
-pub(crate) struct Resource<Endpoint> {
+pub(crate) struct Resource<Endpoint: Debug + Clone + Ord + Eq + Hash> {
     pub path: String,
     pub discoverable: Option<DiscoverableResource>,
     pub handler: ResourceHandler<Endpoint>,
 }
-
-dyn_clone::clone_trait_object!(<Endpoint> RequestHandler<Endpoint>);

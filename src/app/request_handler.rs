@@ -8,6 +8,8 @@ pub trait RequestHandler<Endpoint>: DynClone + 'static {
     async fn handle(&self, request: Request<Endpoint>) -> Result<Response, CoapError>;
 }
 
+dyn_clone::clone_trait_object!(<Endpoint> RequestHandler<Endpoint>);
+
 #[async_trait]
 impl<Endpoint, F, R> RequestHandler<Endpoint> for F
 where

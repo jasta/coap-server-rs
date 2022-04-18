@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use coap_lite::{ContentFormat, ResponseType};
 
-use crate::app::app_builder::AppBuilder;
 use crate::app::error::CoapError;
 use crate::app::request_handler::RequestHandler;
 use crate::app::resource_builder::DiscoverableResource;
@@ -16,16 +17,15 @@ pub struct CoreRequestHandler {
 }
 
 impl CoreRequestHandler {
-    pub fn install<Endpoint: Send + 'static>(builder: &mut AppBuilder<Endpoint>) {
-        let request_handler = Self {
-            resources: Arc::new(builder.discoverable_resources.clone()),
+    pub(crate) fn new_resource_builder<
+        Endpoint: Debug + Clone + Ord + Eq + Hash + Send + 'static,
+    >(
+        resources: Vec<DiscoverableResource>,
+    ) -> ResourceBuilder<Endpoint> {
+        let me = Self {
+            resources: Arc::new(resources),
         };
-        let resource = ResourceBuilder::new("/.well-known/core")
-            .get(request_handler)
-            .build();
-        builder
-            .resources_by_path
-            .insert(resource.path, resource.handler);
+        ResourceBuilder::new("/.well-known/core").get(me)
     }
 }
 
