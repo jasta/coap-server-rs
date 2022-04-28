@@ -26,4 +26,4 @@ jobs:
       env:
         COVERALLS_KEY: ${{ secrets.COVERALLS_KEY }}
       with:
-        args: '-- --coveralls "$COVERALLS_KEY"'
+        args: '-- --avoid-cfg-tarpaulin --coveralls "$COVERALLS_KEY"'
