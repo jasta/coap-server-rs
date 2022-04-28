@@ -149,4 +149,31 @@ mod tests {
         let y = x.wrapping_add(u24::from(1u8));
         assert_eq!(y, u24::MIN);
     }
+
+    #[test]
+    fn test_try_from_overflow() {
+        try_from_overflow(u16::MAX);
+        try_from_overflow(u8::MAX);
+    }
+
+    fn try_from_overflow<T: TryFrom<u24> + Display + Into<u24>>(max: T) {
+        let one_too_many = max.into() + u24::from(1u8);
+        let result = T::try_from(one_too_many);
+        if let Ok(converted) = result {
+            panic!("Expected conversion error, got '{converted}'");
+        }
+    }
+
+    #[test]
+    fn test_into_overflow() {
+        into_overflow(u32::MAX);
+        into_overflow(u64::MAX);
+    }
+
+    fn into_overflow<T: TryInto<u24> + Display>(max: T) {
+        let result = max.try_into();
+        if let Ok(converted) = result {
+            panic!("Expected conversion error, got '{converted}'");
+        }
+    }
 }
