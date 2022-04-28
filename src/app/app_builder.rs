@@ -76,7 +76,8 @@ impl<Endpoint: Ord + Clone> AppBuilder<Endpoint> {
         self
     }
 
-    /// Add a resource handler to the app by the configured path.
+    /// Add a resource handler to the app by the configured path.  See [`crate::app::resource`]
+    /// to start building one.
     pub fn resource(mut self, resource: ResourceBuilder<Endpoint>) -> Self {
         self.resources.push(resource);
         self

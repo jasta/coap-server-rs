@@ -114,7 +114,7 @@ impl Observers {
     /// simply set the observe value in the response with `response.message.set_observe_value(...)`.
     /// Be sure that if you do this, you are taking care that the sequence number does not
     /// run backwards within 256 seconds as per:
-    /// https://datatracker.ietf.org/doc/html/rfc7641#section-4.4
+    /// [RFC 7641, section 4.4](https://datatracker.ietf.org/doc/html/rfc7641#section-4.4)
     pub async fn notify_change(&self) {
         let new_change_num = {
             let mut change_num = self.change_num.lock().await;
