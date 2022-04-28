@@ -1,8 +1,8 @@
 # Robust, ergonomic Rust CoAP server
 
 [![Build Status](https://github.com/jasta/coap-server-rs/workflows/Rust/badge.svg)](https://github.com/jasta/coap-server-rs/actions)
-[![Crates.io](https://img.shields.io/crates/v/coap-server.svg)](https://crates.io/crates/coap-server)
 [![Coverage Status](https://coveralls.io/repos/github/jasta/coap-server-rs/badge.svg?branch=main)](https://coveralls.io/github/jasta/coap-server-rs?branch=main)
+[![Crates.io](https://img.shields.io/crates/v/coap-server.svg)](https://crates.io/crates/coap-server)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/tokio-rs/tokio/blob/master/LICENSE)
 
 An asynchronous [CoAP](https://coap.technology/) server with a modern and
