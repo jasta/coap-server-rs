@@ -61,7 +61,7 @@ See [examples](https://github.com/jasta/coap-server-rs/tree/main/examples) for m
 
 ## Features
 
-This project aims to be a robust and complete CoAP server:
+This project aims to be a robust and complete CoAP server, and in particular a more convenient alternative to MQTT for Rust-based projects:
 
 - [x] Correct and convenient Observe support ([RFC 7641](https://datatracker.ietf.org/doc/html/rfc7641))
 - [x] Block-wise transfer support ([RFC 7959](https://datatracker.ietf.org/doc/html/rfc7959))
