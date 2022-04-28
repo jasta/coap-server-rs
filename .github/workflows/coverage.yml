@@ -23,7 +23,7 @@ jobs:
 
     - name: Run tarpaulin
       uses: actions-rs/tarpaulin@v0.1
+      env:
+        COVERALLS_KEY: ${{ secrets.COVERALLS_KEY }}
       with:
-        env:
-          COVERALLS_KEY: ${{ secrets.COVERALLS_KEY }}
         args: '-- --coveralls "$COVERALLS_KEY"'
