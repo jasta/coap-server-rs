@@ -1,0 +1,29 @@
+name: coverage
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Run tarpaulin
+      uses: actions-rs/tarpaulin@v0.1
+      with:
+        env:
+          COVERALLS_KEY: ${{ secrets.COVERALLS_KEY }}
+        args: '-- --coveralls "$COVERALLS_KEY"'
