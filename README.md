@@ -65,7 +65,7 @@ This project aims to be a robust and complete CoAP server, and in particular a m
 
 - [x] Correct and convenient Observe support ([RFC 7641](https://datatracker.ietf.org/doc/html/rfc7641))
 - [x] Block-wise transfer support ([RFC 7959](https://datatracker.ietf.org/doc/html/rfc7959))
-- [x] Resource discovery via `/.well-known/core` ([RFC 6690](https://datatracker.ietf.org/doc/html/rfc6690))
+- [x] Resource discovery and filtering via `/.well-known/core` ([RFC 6690](https://datatracker.ietf.org/doc/html/rfc6690))
 - [x] Multicast UDP
 - [x] Fully concurrent request handling (no head-of-line blocking or scaling surprises!)
 - [x] Ping/Pong keep-alive messages
@@ -81,7 +81,7 @@ Desired but not implemented:
   this project as the low-level basis for CoAP protocol support
 - [Covertness/coap-rs](https://github.com/Covertness/coap-rs): original server
   I used but outgrew when I needed more robust features like generic Observe
-  support and /.well-known/core filtering.
+  support and `/.well-known/core` filtering.
 - [ryankurte/rust-coap-client](https://raw.githubusercontent.com/ryankurte/rust-coap-client):
   inspired the creation of this crate based on the excellent generalization of
   client backends
