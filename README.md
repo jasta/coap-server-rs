@@ -22,6 +22,7 @@ like IoT devices.
 [![GitHub tag](https://img.shields.io/github/tag/jasta/coap-server-rs.svg)](https://github.com/jasta/coap-server-rs)
 [![Build Status](https://github.com/jasta/coap-server-rs/workflows/Rust/badge.svg)](https://github.com/jasta/coap-server-rs/actions)
 [![Crates.io](https://img.shields.io/crates/v/coap-server.svg)](https://crates.io/crates/coap-server)
+[![Coverage Status](https://coveralls.io/repos/github/jasta/coap-server-rs/badge.svg?branch=main)](https://coveralls.io/github/jasta/coap-server-rs?branch=main)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/tokio-rs/tokio/blob/master/LICENSE)
 
 This project is a work in progress, attempting to provide a rich and stable
