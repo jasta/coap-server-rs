@@ -1,5 +1,10 @@
 # Robust, ergonomic Rust CoAP server
 
+[![Build Status](https://github.com/jasta/coap-server-rs/workflows/Rust/badge.svg)](https://github.com/jasta/coap-server-rs/actions)
+[![Crates.io](https://img.shields.io/crates/v/coap-server.svg)](https://crates.io/crates/coap-server)
+[![Coverage Status](https://coveralls.io/repos/github/jasta/coap-server-rs/badge.svg?branch=main)](https://coveralls.io/github/jasta/coap-server-rs?branch=main)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/tokio-rs/tokio/blob/master/LICENSE)
+
 An asynchronous [CoAP](https://coap.technology/) server with a modern and
 ergonomic API for larger scale applications, inspired by warp and actix.  CoAP
 offers an excellent alternative to HTTP for resource constrained environments
@@ -16,19 +21,6 @@ like IoT devices.
 * **Flexible**: Supports pluggable transport backends with goals of supporting
   alternative async runtimes like
   [embassy](https://github.com/embassy-rs/embassy).
-
-## Status
-
-[![GitHub tag](https://img.shields.io/github/tag/jasta/coap-server-rs.svg)](https://github.com/jasta/coap-server-rs)
-[![Build Status](https://github.com/jasta/coap-server-rs/workflows/Rust/badge.svg)](https://github.com/jasta/coap-server-rs/actions)
-[![Crates.io](https://img.shields.io/crates/v/coap-server.svg)](https://crates.io/crates/coap-server)
-[![Coverage Status](https://coveralls.io/repos/github/jasta/coap-server-rs/badge.svg?branch=main)](https://coveralls.io/github/jasta/coap-server-rs?branch=main)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/tokio-rs/tokio/blob/master/LICENSE)
-
-This project is a work in progress, attempting to provide a rich and stable
-codebase for further development.  See [Project
-Status](https://github.com/jasta/coap-server-rs/issues/1) tracking issue for
-more info.
 
 ## Example
 
@@ -64,6 +56,24 @@ To experiment, I recommend using the excellent [coap-client](https://libcoap.net
 $ coap-client -m get coap://localhost/hello
 Hello, world
 ```
+
+See [examples](https://github.com/jasta/coap-server-rs/tree/main/examples) for more.
+
+## Features
+
+This project aims to be a robust and complete CoAP server:
+
+- [x] Correct and convenient Observe support ([RFC 7641](https://datatracker.ietf.org/doc/html/rfc7641))
+- [x] Block-wise transfer support ([RFC 7959](https://datatracker.ietf.org/doc/html/rfc7959))
+- [x] Resource discovery via `/.well-known/core` ([RFC 6690](https://datatracker.ietf.org/doc/html/rfc6690))
+- [x] Multicast UDP
+- [x] Fully concurrent request handling (no head-of-line blocking or scaling surprises!)
+- [x] Ping/Pong keep-alive messages
+
+Desired but not implemented:
+
+- [ ] [Non-piggybacked responses](https://github.com/jasta/coap-server-rs/issues/4)
+- [ ] Secure transports ([OSCORE](https://github.com/jasta/coap-server-rs/issues/5) and [DTLS](https://github.com/jasta/coap-server-rs/issues/6))
 
 ## Related Projects
 
