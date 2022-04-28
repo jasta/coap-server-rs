@@ -24,7 +24,8 @@ jobs:
     - name: Run tarpaulin
       uses: actions-rs/tarpaulin@v0.1
       with:
-        args: '--avoid-cfg-tarpaulin --out Lcov'
+        out-type: Lcov
+        args: '--avoid-cfg-tarpaulin'
 
     - name: Coveralls Upload
       uses: coverallsapp/github-action@1.1.3
