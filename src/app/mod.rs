@@ -21,7 +21,7 @@ mod observe_handler;
 mod observers;
 mod path_matcher;
 pub mod request;
-mod request_handler;
+pub mod request_handler;
 mod request_type_key;
 pub mod resource_builder;
 mod resource_handler;
