@@ -45,7 +45,10 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + 'static> ResourceHandler<Endpoi
         wrapped_request: Request<Endpoint>,
     ) -> Result<(), CoapError> {
         let method = *wrapped_request.original.get_method();
-        let method_handler = self.handlers.get(&RequestTypeKey::from(method));
+        let method_handler = self
+            .handlers
+            .get(&RequestTypeKey::from(method))
+            .or_else(|| self.handlers.get(&RequestTypeKey::new_match_all()));
 
         // Loop here so we can "park" to wait for notify_change calls from an Observers
         // instances.  For non-observe cases, this loop breaks after its first iteration.
