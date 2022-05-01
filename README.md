@@ -1,4 +1,4 @@
-# Robust, ergonomic Rust CoAP server
+# Robust, ergonomic CoAP server in Rust
 
 [![Build Status](https://github.com/jasta/coap-server-rs/workflows/Rust/badge.svg)](https://github.com/jasta/coap-server-rs/actions)
 [![Coverage Status](https://coveralls.io/repos/github/jasta/coap-server-rs/badge.svg?branch=main)](https://coveralls.io/github/jasta/coap-server-rs?branch=main)
