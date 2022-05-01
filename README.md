@@ -15,7 +15,7 @@ like IoT devices.
 * **Concurrent**: High concurrency is supported by using a separate spawned
   task for each request, allowing long running requests to not interfere with
   shorter running ones at scale.
-* **Feature-rich**: Supports a wide range of CoAP server features including
+* **Feature-rich**: Conveniently supports a wide range of CoAP server features including
   [Observe](https://datatracker.ietf.org/doc/html/rfc7641), and [Block-wise
   Transfer](https://datatracker.ietf.org/doc/html/rfc7959).
 * **Flexible**: Supports pluggable transport backends with goals of supporting
