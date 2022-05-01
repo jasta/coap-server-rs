@@ -49,8 +49,9 @@ struct CounterState {
 #[async_trait]
 impl ObservableResource for CounterState {
     async fn on_active(&self, observers: Observers) -> Observers {
-        info!("Observe active...");
-        self.observers.attach(observers).await;
+        let relative_path = observers.relative_path();
+        info!("Observe active for path: {relative_path}...");
+        let attached = self.observers.attach(observers).await;
         let (tx, mut rx) = oneshot::channel();
         let counter = self.counter.clone();
         let observers = self.observers.clone();
@@ -68,10 +69,10 @@ impl ObservableResource for CounterState {
                 }
             }
         });
-        self.observers.stay_active().await;
+        attached.stay_active().await;
         tx.send(()).unwrap();
-        info!("Observe no longer active!");
-        self.observers.detach().await
+        info!("Observe no longer active for path: {relative_path}!");
+        attached.detach().await
     }
 }
 

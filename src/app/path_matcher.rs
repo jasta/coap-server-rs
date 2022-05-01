@@ -1,7 +1,9 @@
+use std::collections::hash_map::Values;
 use std::collections::HashMap;
 
 /// Lookup mechanism that uses inexact matching of input paths by finding the most specific
 /// match and returning that instead.  See [`PathMatcher::lookup`] for more information.
+#[derive(Debug)]
 pub struct PathMatcher<V> {
     map: HashMap<Vec<String>, V>,
 }
@@ -15,17 +17,16 @@ impl<V> FromIterator<(Vec<String>, V)> for PathMatcher<V> {
 }
 
 impl<V> PathMatcher<V> {
+    pub fn new_empty() -> Self {
+        Self {
+            map: HashMap::default(),
+        }
+    }
+
     /// Convert canonical path strings into the more efficient PathMatcher variation.  Input paths
     /// are expected to be in the form of "/foo/bar".
     pub fn from_path_strings(src: HashMap<String, V>) -> Self {
-        let iter = src.into_iter().map(|(k, v)| {
-            let new_key: Vec<_> = k
-                .split('/')
-                .filter(|s| !s.is_empty())
-                .map(|s| s.to_string())
-                .collect();
-            (new_key, v)
-        });
+        let iter = src.into_iter().map(|(k, v)| (key_from_path(&k), v));
         Self::from_iter(iter)
     }
 
@@ -43,6 +44,47 @@ impl<V> PathMatcher<V> {
         }
         None
     }
+
+    /// Identical to `lookup` except that it doesn't stop once the most specific match has been
+    /// found, but rather returns all potential matches.  For example, if the input path is
+    /// "/foo/bar", and the matcher contains "/foo", "/foo/bar", "/baz", the result will be
+    /// matched results for "/foo" and "/foo/bar".
+    pub fn match_all(&self, path: &[String]) -> Vec<MatchedResult<V>> {
+        let mut result = Vec::new();
+        for search_depth in (0..path.len() + 1).rev() {
+            let search_path = &path[0..search_depth];
+            if let Some(value) = self.map.get(search_path) {
+                result.push(MatchedResult {
+                    value,
+                    matched_index: search_depth,
+                });
+            }
+        }
+        result
+    }
+
+    pub fn insert(&mut self, key: Vec<String>, value: V) -> Option<V> {
+        self.map.insert(key, value)
+    }
+
+    pub fn remove(&mut self, key: &[String]) -> Option<V> {
+        self.map.remove(key)
+    }
+
+    pub fn values(&self) -> Values<'_, Vec<String>, V> {
+        self.map.values()
+    }
+
+    pub fn lookup_exact(&self, path: &[String]) -> Option<&V> {
+        self.map.get(path)
+    }
+}
+
+pub fn key_from_path(path: &str) -> Vec<String> {
+    path.split('/')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
 }
 
 /// Looked up value but also the index at which the match occurred so that the caller can determine

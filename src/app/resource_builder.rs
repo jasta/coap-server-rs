@@ -143,7 +143,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord> ResourceBuilder<Endpoint> {
 
         let observe_handler = self
             .observable
-            .map(|x| Arc::new(Mutex::new(ObserveHandler::new(x))));
+            .map(|x| Arc::new(Mutex::new(ObserveHandler::new(self.path.clone(), x))));
 
         let block_transfer = self
             .config

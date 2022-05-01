@@ -12,17 +12,24 @@ use coap_lite::{CoapRequest, ObserveOption};
 use futures::StreamExt;
 use rand::RngCore;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::sync::{mpsc, oneshot, watch, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::app::observers::NotificationState;
+use crate::app::path_matcher::key_from_path;
 use crate::app::u24::u24;
 use crate::app::{CoapError, ObservableResource, Observers};
 
-#[derive(Debug)]
 pub struct ObserveHandler<Endpoint> {
-    observers_change_dispatcher: UnboundedSender<ObserverDispatchEvent>,
-    notify_change_tx: Option<Arc<watch::Sender<NotificationState>>>,
+    path_prefix: String,
+    resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
+    registrations_by_path: Arc<Mutex<HashMap<String, RegistrationsForPath<Endpoint>>>>,
+}
+
+#[derive(Debug)]
+struct RegistrationsForPath<Endpoint> {
+    change_dispatcher: UnboundedSender<ObserverDispatchEvent>,
+    notify_change_tx: Arc<watch::Sender<NotificationState>>,
     registrations: HashMap<RegistrationKey<Endpoint>, InternalRegistration>,
 }
 
@@ -44,17 +51,16 @@ pub struct RegistrationHandle {
 }
 
 impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
-    pub fn new(resource: Box<dyn ObservableResource + Send + Sync>) -> Self {
-        let observers_change_dispatcher = OnObserversChangeDispatcher::start(resource);
+    pub fn new(path_prefix: String, resource: Box<dyn ObservableResource + Send + Sync>) -> Self {
         Self {
-            observers_change_dispatcher,
-            notify_change_tx: None,
-            registrations: HashMap::new(),
+            path_prefix,
+            resource: Arc::new(resource),
+            registrations_by_path: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    pub fn maybe_process_registration(
-        &mut self,
+    pub async fn maybe_process_registration(
+        &self,
         request_response_pair: &mut CoapRequest<Endpoint>,
     ) -> Result<RegistrationEvent, CoapError> {
         let observe_flag_result = request_response_pair.get_observe_flag();
@@ -65,6 +71,8 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
         let observe_flag = observe_flag_result
             .unwrap()
             .map_err(CoapError::bad_request)?;
+
+        let path = request_response_pair.get_path();
 
         let response = request_response_pair
             .response
@@ -85,28 +93,43 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
             .ok_or_else(|| CoapError::internal("Missing source!"))?
             .to_owned();
         let token = request_response_pair.message.get_token().to_vec();
-        let registration = RegistrationKey::new(peer, token);
+        let registration_key = RegistrationKey::new(peer, token);
+
+        // Take the lock to ensure that for the remainder of the function scope we don't
+        // end up doing something silly like registering an entry twice by our little retain
+        // trick below.
+        let mut by_path = self.registrations_by_path.lock().await;
+
+        // Try for eventual cleanup here by only doing the removal operations on each new
+        // registration...
+        by_path.retain(|_, v| v.notify_change_tx.receiver_count() > 0);
 
         match observe_flag {
             ObserveOption::Register => {
-                let receiver_count = self
-                    .notify_change_tx
-                    .as_ref()
-                    .map(|s| s.receiver_count())
-                    .unwrap_or(0);
-                let notify_change_tx = if receiver_count > 0 {
-                    self.notify_change_tx.as_ref().unwrap()
-                } else {
+                let for_path = by_path.entry(path).or_insert_with_key(|path_key| {
                     let mut u24_bytes = [0u8; 3];
                     rand::thread_rng().fill_bytes(&mut u24_bytes);
-                    let observers = Observers::new(u24::from_le_bytes(u24_bytes));
+                    let relative_path = path_key.replace(&self.path_prefix, "");
+                    let observers = Observers::new(
+                        key_from_path(&relative_path),
+                        u24::from_le_bytes(u24_bytes),
+                    );
                     let notify_change_tx = observers.leak_notify_change_tx();
-                    self.observers_change_dispatcher
+
+                    let change_dispatcher =
+                        OnObserversChangeDispatcher::start(self.resource.clone());
+                    change_dispatcher
                         .send(ObserverDispatchEvent::OnFirstObserver(observers))
                         .unwrap();
-                    self.notify_change_tx.insert(notify_change_tx)
-                };
-                let notify_rx = notify_change_tx.subscribe();
+
+                    RegistrationsForPath {
+                        change_dispatcher,
+                        registrations: HashMap::new(),
+                        notify_change_tx,
+                    }
+                });
+
+                let notify_rx = for_path.notify_change_tx.subscribe();
                 let current_state = *notify_rx.borrow();
 
                 let (termination_tx, termination_rx) = oneshot::channel();
@@ -124,13 +147,15 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
                     response.message.set_observe_value(u32::from(change_num));
                 }
 
-                let existing = self.registrations.insert(registration, internal);
+                let existing = for_path.registrations.insert(registration_key, internal);
                 let _ = Self::maybe_shutdown_existing(existing);
 
                 Ok(RegistrationEvent::Registered(handle))
             }
             ObserveOption::Deregister => {
-                let existing = self.registrations.remove(&registration);
+                let existing = by_path
+                    .get_mut(&path)
+                    .and_then(|for_path| for_path.registrations.remove(&registration_key));
                 match Self::maybe_shutdown_existing(existing) {
                     Ok(_) => Ok(RegistrationEvent::Unregistered),
                     Err(_) => Ok(RegistrationEvent::NoChange),
@@ -154,20 +179,16 @@ impl<Endpoint> RegistrationKey<Endpoint> {
     }
 }
 
-pub trait ContextFactory<Context> {
-    fn new_context(&self, initial_sequence: u32) -> Context;
-}
-
 /// Responsible for ensuring that we dispatch calls to [`ObservableResource`] are serial (i.e.
 /// the customer can expect that two concurrent `on_active` calls will not be possible.
 struct OnObserversChangeDispatcher {
-    resource: Box<dyn ObservableResource + Send + Sync>,
+    resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
     rx: UnboundedReceiverStream<ObserverDispatchEvent>,
 }
 
 impl OnObserversChangeDispatcher {
     pub fn start(
-        resource: Box<dyn ObservableResource + Send + Sync>,
+        resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
     ) -> UnboundedSender<ObserverDispatchEvent> {
         let (tx, rx) = mpsc::unbounded_channel();
         let me = Self {

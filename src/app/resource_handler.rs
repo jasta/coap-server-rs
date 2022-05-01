@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use coap_lite::{BlockHandler, CoapRequest, MessageType, Packet};
+use coap_lite::{BlockHandler, CoapOption, CoapRequest, MessageType, Packet};
 use log::debug;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::Mutex;
@@ -102,6 +102,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + 'static> ResourceHandler<Endpoi
                             }
                             NotificationState::ResourceChanged(change_num) => {
                                 let mut current_pair = initial_pair.clone();
+                                current_pair.message.clear_option(CoapOption::Observe);
                                 let fut = {
                                     self.generate_and_assign_response(
                                         handler,
@@ -194,6 +195,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + 'static> ResourceHandler<Endpoi
                 .lock()
                 .await
                 .maybe_process_registration(request)
+                .await
         } else {
             Ok(RegistrationEvent::NoChange)
         }
