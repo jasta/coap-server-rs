@@ -132,7 +132,6 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + 'static> ResourceHandler<Endpoi
                                     self.retransmission_manager
                                         .lock().await
                                         .send_reliably(response_packet.clone(), peer.clone(), tx.clone())
-                                        .expect("Fatal error, oops!")
                                 };
                                 let send_result = send_handle.into_future().await;
                                 if let Err(e) = send_result {

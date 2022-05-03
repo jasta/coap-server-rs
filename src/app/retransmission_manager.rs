@@ -13,13 +13,12 @@ use tokio::sync::watch;
 use tokio::time;
 use tokio::time::Instant;
 
-use crate::FatalServerError;
-
 pub type MessageId = u16;
 
 /// Applies appropriate ack timeouts and retry policies for Confirmable messages that are
 /// sent through it.
 pub struct RetransmissionManager<Endpoint: Debug + Clone + Eq + Hash> {
+    next_message_id: MessageId,
     unacknowledged_messages: HashMap<MessageKey<Endpoint>, ReplyHandle>,
     parameters: TransmissionParameters,
 }
@@ -38,12 +37,20 @@ struct MessageKey<Endpoint: Debug + Clone + Eq + Hash> {
 }
 
 struct ReplyHandle {
-    reply_tx: watch::Sender<Option<MessageType>>,
+    reply_tx: watch::Sender<ReplyEvent>,
+}
+
+#[derive(Debug, Clone)]
+enum ReplyEvent {
+    None,
+    PeerResponse(MessageType),
+    InternalError(String),
 }
 
 impl<Endpoint: Debug + Clone + Eq + Hash> RetransmissionManager<Endpoint> {
     pub fn new(parameters: TransmissionParameters) -> Self {
         Self {
+            next_message_id: rand::thread_rng().gen(),
             unacknowledged_messages: Default::default(),
             parameters,
         }
@@ -60,7 +67,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash> RetransmissionManager<Endpoint> {
         if let Some(ack_handle) = self.unacknowledged_messages.remove(&key) {
             ack_handle
                 .reply_tx
-                .send(Some(packet.header.get_type()))
+                .send(ReplyEvent::PeerResponse(packet.header.get_type()))
                 .unwrap();
             Ok(())
         } else {
@@ -71,38 +78,37 @@ impl<Endpoint: Debug + Clone + Eq + Hash> RetransmissionManager<Endpoint> {
     /// Long running send operation that will handle all the timeout and retry logic internally.
     /// This design makes it trivial for each individual call to manage its own
     /// error behaviour without dealing with clumsy callbacks.
+    ///
+    /// Note that this method mutates the packet that is to be sent to ensure it is Confirmable
+    /// and has an appropriate message ID.  This ensures that the method is infallible.
     pub fn send_reliably(
         &mut self,
-        packet: Packet,
+        mut packet: Packet,
         peer: Endpoint,
         packet_tx: UnboundedSender<Packet>,
-    ) -> Result<SendReliably<Endpoint>, FatalServerError> {
-        if packet.header.get_type() != MessageType::Confirmable {
-            return Err(FatalServerError::InternalError(
-                "only Confirmable messages supported!".to_string(),
-            ));
-        }
+    ) -> SendReliably<Endpoint> {
+        packet.header.message_id = self.next_message_id;
+        self.next_message_id = self.next_message_id.wrapping_add(1);
+        packet.header.set_type(MessageType::Confirmable);
 
-        let (reply_tx, reply_rx) = watch::channel(None);
+        let (reply_tx, reply_rx) = watch::channel(ReplyEvent::None);
         let ack_handle = ReplyHandle { reply_tx };
         let key = MessageKey::new(&packet, peer.clone());
-        if self
-            .unacknowledged_messages
-            .insert(key.clone(), ack_handle)
-            .is_some()
-        {
-            return Err(FatalServerError::InternalError(format!(
-                "Already tracking message key {key:?}"
-            )));
+        if let Some(existing_send) = self.unacknowledged_messages.insert(key.clone(), ack_handle) {
+            let _ = existing_send
+                .reply_tx
+                .send(ReplyEvent::InternalError(format!(
+                    "Re-used message key {key:?} by another send!"
+                )));
         }
 
-        Ok(SendReliably {
+        SendReliably {
             packet,
             packet_tx,
             peer,
             parameters: self.parameters,
             reply_rx,
-        })
+        }
     }
 }
 
@@ -154,7 +160,7 @@ pub struct SendReliably<Endpoint> {
     peer: Endpoint,
     packet_tx: UnboundedSender<Packet>,
     parameters: TransmissionParameters,
-    reply_rx: watch::Receiver<Option<MessageType>>,
+    reply_rx: watch::Receiver<ReplyEvent>,
 }
 
 impl<Endpoint: Debug> SendReliably<Endpoint> {
@@ -176,17 +182,18 @@ impl<Endpoint: Debug> SendReliably<Endpoint> {
                 let mut reply_rx = self.reply_rx.clone();
                 let timeout = time::timeout_at(deadline, reply_rx.changed());
                 match timeout.await {
-                    Ok(_) => match *reply_rx.borrow() {
-                        None => {}
-                        Some(t) if t == MessageType::Acknowledgement => {
+                    Ok(_) => match reply_rx.borrow().clone() {
+                        ReplyEvent::None => {}
+                        ReplyEvent::PeerResponse(t) if t == MessageType::Acknowledgement => {
                             return Ok(());
                         }
-                        Some(t) if t == MessageType::Reset => {
+                        ReplyEvent::PeerResponse(t) if t == MessageType::Reset => {
                             return Err(SendFailed::Reset);
                         }
-                        t => {
+                        ReplyEvent::PeerResponse(t) => {
                             return Err(SendFailed::InternalError(format!("unexpected t={t:?}")));
                         }
+                        ReplyEvent::InternalError(e) => return Err(SendFailed::InternalError(e)),
                     },
                     Err(_) => break,
                 };
