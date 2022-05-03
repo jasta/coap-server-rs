@@ -9,11 +9,9 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use coap_lite::{CoapRequest, ObserveOption};
-use futures::StreamExt;
+use log::{debug, warn};
 use rand::RngCore;
-use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::{mpsc, oneshot, watch, Mutex};
-use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio::sync::{oneshot, watch, Mutex};
 
 use crate::app::observers::NotificationState;
 use crate::app::path_matcher::key_from_path;
@@ -22,13 +20,12 @@ use crate::app::{CoapError, ObservableResource, Observers};
 
 pub struct ObserveHandler<Endpoint> {
     path_prefix: String,
-    resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
+    resource: Box<dyn ObservableResource + Send + Sync>,
     registrations_by_path: Arc<Mutex<HashMap<String, RegistrationsForPath<Endpoint>>>>,
 }
 
 #[derive(Debug)]
 struct RegistrationsForPath<Endpoint> {
-    change_dispatcher: UnboundedSender<ObserverDispatchEvent>,
     notify_change_tx: Arc<watch::Sender<NotificationState>>,
     registrations: HashMap<RegistrationKey<Endpoint>, InternalRegistration>,
 }
@@ -54,7 +51,7 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
     pub fn new(path_prefix: String, resource: Box<dyn ObservableResource + Send + Sync>) -> Self {
         Self {
             path_prefix,
-            resource: Arc::new(resource),
+            resource,
             registrations_by_path: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -95,18 +92,9 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
         let token = request_response_pair.message.get_token().to_vec();
         let registration_key = RegistrationKey::new(peer, token);
 
-        // Take the lock to ensure that for the remainder of the function scope we don't
-        // end up doing something silly like registering an entry twice by our little retain
-        // trick below.
-        let mut by_path = self.registrations_by_path.lock().await;
-
-        // Try for eventual cleanup here by only doing the removal operations on each new
-        // registration...
-        by_path.retain(|_, v| v.notify_change_tx.receiver_count() > 0);
-
         match observe_flag {
             ObserveOption::Register => {
-                let for_path = by_path.entry(path).or_insert_with_key(|path_key| {
+                let for_path = self.registrations_by_path.lock().await.entry(path).or_insert_with_key(|path_key| {
                     let mut u24_bytes = [0u8; 3];
                     rand::thread_rng().fill_bytes(&mut u24_bytes);
                     let relative_path = path_key.replace(&self.path_prefix, "");
@@ -116,14 +104,11 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
                     );
                     let notify_change_tx = observers.leak_notify_change_tx();
 
-                    let change_dispatcher =
-                        OnObserversChangeDispatcher::start(self.resource.clone());
-                    change_dispatcher
-                        .send(ObserverDispatchEvent::OnFirstObserver(observers))
-                        .unwrap();
+                    tokio::spawn(async move {
+                        self.handle_on_active_lifecycle(path_key.clone(), observers);
+                    });
 
                     RegistrationsForPath {
-                        change_dispatcher,
                         registrations: HashMap::new(),
                         notify_change_tx,
                     }
@@ -148,15 +133,15 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
                 }
 
                 let existing = for_path.registrations.insert(registration_key, internal);
-                let _ = Self::maybe_shutdown_existing(existing);
+                let _ = Self::maybe_shutdown_single_observer(existing);
 
                 Ok(RegistrationEvent::Registered(handle))
             }
             ObserveOption::Deregister => {
-                let existing = by_path
+                let existing = self.registrations_by_path.lock().await
                     .get_mut(&path)
                     .and_then(|for_path| for_path.registrations.remove(&registration_key));
-                match Self::maybe_shutdown_existing(existing) {
+                match Self::maybe_shutdown_single_observer(existing) {
                     Ok(_) => Ok(RegistrationEvent::Unregistered),
                     Err(_) => Ok(RegistrationEvent::NoChange),
                 }
@@ -164,12 +149,33 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
         }
     }
 
-    fn maybe_shutdown_existing(existing: Option<InternalRegistration>) -> Result<(), ()> {
+    fn maybe_shutdown_single_observer(existing: Option<InternalRegistration>) -> Result<(), ()> {
         if let Some(existing) = existing {
             existing.termination_tx.send(()).unwrap();
             return Ok(());
         }
         Err(())
+    }
+
+    async fn handle_on_active_lifecycle(&self, path_key: String, observers: Observers) {
+        let path_pretty = observers.relative_path();
+        log::debug!("entered OnFirstObserver for: {path_pretty}");
+        self.resource.on_active(observers).await;
+        match self.registrations_by_path.lock().await.remove(&path_key) {
+            Some(for_path) => {
+                debug!("shutting down {} observers...", for_path.registrations.len());
+                for (_, internal_reg) in for_path.registrations {
+                    let _ = Self::maybe_shutdown_single_observer(Some(internal_reg));
+                }
+            }
+            None => {
+                // The user is supposed to be able to hold onto the registration for as long
+                // as they like, removing it only here after they release control in on_active.
+                // This code path isn't supposed to be possible in practice...
+                warn!("Internal registration record removed without user consent, how???");
+            }
+        }
+        log::debug!("exit OnFirstObserver for: {path_pretty}");
     }
 }
 
@@ -177,55 +183,6 @@ impl<Endpoint> RegistrationKey<Endpoint> {
     pub fn new(peer: Endpoint, token: Vec<u8>) -> Self {
         Self { peer, token }
     }
-}
-
-/// Responsible for ensuring that we dispatch calls to [`ObservableResource`] are serial (i.e.
-/// the customer can expect that two concurrent `on_active` calls will not be possible.
-struct OnObserversChangeDispatcher {
-    resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
-    rx: UnboundedReceiverStream<ObserverDispatchEvent>,
-}
-
-impl OnObserversChangeDispatcher {
-    pub fn start(
-        resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
-    ) -> UnboundedSender<ObserverDispatchEvent> {
-        let (tx, rx) = mpsc::unbounded_channel();
-        let me = Self {
-            resource,
-            rx: UnboundedReceiverStream::new(rx),
-        };
-        tokio::spawn(async move {
-            me.run().await;
-        });
-        tx
-    }
-
-    pub async fn run(mut self) {
-        while let Some(event) = self.rx.next().await {
-            match event {
-                ObserverDispatchEvent::OnFirstObserver(observers) => {
-                    let path = observers.relative_path();
-                    log::debug!("entered OnFirstObserver for: {path}");
-                    self.resource.on_active(observers).await;
-
-                    // TODO: We should probably be mutating the state here to drop all of the observers and
-                    // cleanup state but it technically isn't necessary (or so I assume hehe) because
-                    // we can just cleanup the registrations cheaply next time the resource is
-                    // Registered (and we check that the Observers instance has no subscribers).
-                    // This does mean however that an app cannot signal that for some reason
-                    // there's a problem observing the resource and we must forcefully
-                    // cleanup with our peers.
-                    log::debug!("exit OnFirstObserver for: {path}");
-                }
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-enum ObserverDispatchEvent {
-    OnFirstObserver(Observers),
 }
 
 #[derive(Debug)]
