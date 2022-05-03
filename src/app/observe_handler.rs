@@ -205,7 +205,8 @@ impl OnObserversChangeDispatcher {
         while let Some(event) = self.rx.next().await {
             match event {
                 ObserverDispatchEvent::OnFirstObserver(observers) => {
-                    log::debug!("entered OnFirstObserver");
+                    let path = observers.relative_path();
+                    log::debug!("entered OnFirstObserver for: {path}");
                     self.resource.on_active(observers).await;
 
                     // TODO: We should probably be mutating the state here to drop all of the observers and
@@ -215,7 +216,7 @@ impl OnObserversChangeDispatcher {
                     // This does mean however that an app cannot signal that for some reason
                     // there's a problem observing the resource and we must forcefully
                     // cleanup with our peers.
-                    log::debug!("exit OnFirstObserver");
+                    log::debug!("exit OnFirstObserver for: {path}");
                 }
             }
         }
