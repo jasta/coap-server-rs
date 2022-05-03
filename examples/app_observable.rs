@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use coap_lite::link_format::LINK_ATTR_RESOURCE_TYPE;
+use coap_lite::ContentFormat;
 use log::info;
 use tokio::sync::{oneshot, Mutex};
 use tokio::time;
@@ -83,6 +84,9 @@ async fn handle_get_counter(
     let count = *state.counter.lock().await;
     let mut response = request.new_response();
     response.message.payload = format!("{count}\n").into_bytes();
+    response
+        .message
+        .set_content_format(ContentFormat::TextPlain);
     Ok(response)
 }
 
