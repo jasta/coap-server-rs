@@ -164,6 +164,10 @@ pub struct SendReliably<Endpoint> {
 }
 
 impl<Endpoint: Debug> SendReliably<Endpoint> {
+    pub fn get_message_id(&self) -> MessageId {
+        self.packet.header.message_id
+    }
+
     pub async fn into_future(self) -> Result<(), SendFailed> {
         let mut next_timeout = rand::thread_rng().gen_range(self.parameters.ack_timeout_range());
         for attempt in 0..=self.parameters.max_retransmit {
@@ -264,7 +268,6 @@ mod tests {
         let received: Vec<_> = UnboundedReceiverStream::new(packet_rx).collect().await;
 
         assert_eq!(received.len(), 2);
-        assert_eq!(received[0].header.message_id, 5);
     }
 
     #[tokio::test(start_paused = true)]
@@ -283,6 +286,7 @@ mod tests {
 
         let result = {
             let handle = manager.send_reliably(sent_packet, TestEndpoint(123), packet_tx);
+            ack_packet.header.message_id = handle.get_message_id();
             manager
                 .maybe_handle_reply(ack_packet, &TestEndpoint(123))
                 .unwrap();
@@ -302,10 +306,11 @@ mod tests {
         let mut sent_packet = Packet::new();
         sent_packet.header.message_id = 5;
 
-        let reset_packet = new_pong_message(&sent_packet);
+        let mut reset_packet = new_pong_message(&sent_packet);
 
         let result = {
             let handle = manager.send_reliably(sent_packet, TestEndpoint(123), packet_tx);
+            reset_packet.header.message_id = handle.get_message_id();
             manager
                 .maybe_handle_reply(reset_packet, &TestEndpoint(123))
                 .unwrap();
