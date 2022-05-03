@@ -1,6 +1,7 @@
 use crate::app::path_matcher::{key_from_path, PathMatcher};
 use crate::app::u24::u24;
 use std::sync::Arc;
+use log::trace;
 use tokio::sync::{watch, Mutex, RwLock};
 
 /// Optional convenience mechanism to aid in managing dynamic [`Observers`] instances.
@@ -77,14 +78,18 @@ impl ObserversHolder {
     /// `relative_path` is relative to the resource path that the [`crate::app::ObservableResource`]
     /// was installed at.
     pub async fn notify_change_for_path(&self, relative_path: &str) {
+        trace!("entered notify_change_for_path: {relative_path}");
         for result in self
             .inner
             .read()
             .await
             .match_all(&key_from_path(relative_path))
         {
+            trace!("entered notify_change");
             result.value.notify_change().await;
+            trace!("...exit");
         }
+        trace!("...exit");
     }
 }
 
