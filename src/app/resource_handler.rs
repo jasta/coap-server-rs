@@ -38,7 +38,7 @@ impl<Endpoint: Debug + Clone + Ord + Eq + Hash> Clone for ResourceHandler<Endpoi
     }
 }
 
-impl<Endpoint: Debug + Clone + Eq + Hash + Ord + 'static> ResourceHandler<Endpoint> {
+impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceHandler<Endpoint> {
     pub async fn handle(
         &self,
         tx: &UnboundedSender<Packet>,

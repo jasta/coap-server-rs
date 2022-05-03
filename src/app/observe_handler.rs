@@ -18,9 +18,10 @@ use crate::app::path_matcher::key_from_path;
 use crate::app::u24::u24;
 use crate::app::{CoapError, ObservableResource, Observers};
 
+#[derive(Clone)]
 pub struct ObserveHandler<Endpoint> {
     path_prefix: String,
-    resource: Box<dyn ObservableResource + Send + Sync>,
+    resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
     registrations_by_path: Arc<Mutex<HashMap<String, RegistrationsForPath<Endpoint>>>>,
 }
 
@@ -47,11 +48,11 @@ pub struct RegistrationHandle {
     pub notify_rx: watch::Receiver<NotificationState>,
 }
 
-impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
+impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
     pub fn new(path_prefix: String, resource: Box<dyn ObservableResource + Send + Sync>) -> Self {
         Self {
             path_prefix,
-            resource,
+            resource: Arc::new(resource),
             registrations_by_path: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -92,9 +93,11 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
         let token = request_response_pair.message.get_token().to_vec();
         let registration_key = RegistrationKey::new(peer, token);
 
+        let mut by_path = self.registrations_by_path.lock().await;
+
         match observe_flag {
             ObserveOption::Register => {
-                let for_path = self.registrations_by_path.lock().await.entry(path).or_insert_with_key(|path_key| {
+                let for_path = by_path.entry(path).or_insert_with_key(|path_key| {
                     let mut u24_bytes = [0u8; 3];
                     rand::thread_rng().fill_bytes(&mut u24_bytes);
                     let relative_path = path_key.replace(&self.path_prefix, "");
@@ -104,8 +107,10 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
                     );
                     let notify_change_tx = observers.leak_notify_change_tx();
 
+                    let self_clone = self.to_owned();
+                    let path_key_clone = path_key.clone();
                     tokio::spawn(async move {
-                        self.handle_on_active_lifecycle(path_key.clone(), observers);
+                        self_clone.handle_on_active_lifecycle(path_key_clone, observers).await;
                     });
 
                     RegistrationsForPath {
@@ -138,7 +143,7 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
                 Ok(RegistrationEvent::Registered(handle))
             }
             ObserveOption::Deregister => {
-                let existing = self.registrations_by_path.lock().await
+                let existing = by_path
                     .get_mut(&path)
                     .and_then(|for_path| for_path.registrations.remove(&registration_key));
                 match Self::maybe_shutdown_single_observer(existing) {
@@ -151,13 +156,17 @@ impl<Endpoint: Eq + Hash + Clone> ObserveHandler<Endpoint> {
 
     fn maybe_shutdown_single_observer(existing: Option<InternalRegistration>) -> Result<(), ()> {
         if let Some(existing) = existing {
-            existing.termination_tx.send(()).unwrap();
+            let _ = existing.termination_tx.send(());
             return Ok(());
         }
         Err(())
     }
 
-    async fn handle_on_active_lifecycle(&self, path_key: String, observers: Observers) {
+    async fn handle_on_active_lifecycle(
+        &self,
+        path_key: String,
+        observers: Observers
+    ) {
         let path_pretty = observers.relative_path();
         log::debug!("entered OnFirstObserver for: {path_pretty}");
         self.resource.on_active(observers).await;

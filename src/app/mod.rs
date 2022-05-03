@@ -35,7 +35,7 @@ pub fn new<Endpoint: Debug + Clone + Ord + Eq + Hash>() -> AppBuilder<Endpoint> 
 }
 
 /// Start builder a new resource handler
-pub fn resource<Endpoint: Debug + Clone + Ord + Eq + Hash>(
+pub fn resource<Endpoint: Debug + Clone + Ord + Eq + Hash + Send + 'static>(
     path: &str,
 ) -> ResourceBuilder<Endpoint> {
     ResourceBuilder::new(path)

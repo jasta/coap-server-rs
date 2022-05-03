@@ -26,7 +26,7 @@ pub struct ResourceBuilder<Endpoint: Ord + Clone> {
     observable: Option<Box<dyn ObservableResource + Send + Sync>>,
 }
 
-impl<Endpoint: Debug + Clone + Eq + Hash + Ord> ResourceBuilder<Endpoint> {
+impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceBuilder<Endpoint> {
     pub fn new(path: &str) -> Self {
         Self {
             path: path.to_string(),
