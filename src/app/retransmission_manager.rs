@@ -254,9 +254,10 @@ mod tests {
         let (packet_tx, packet_rx) = mpsc::unbounded_channel();
 
         let mut sent_packet = Packet::new();
-        sent_packet.header.message_id = 5;
+        let mut message_id = None;
         let result = {
             let handle = manager.send_reliably(sent_packet, &TestEndpoint(123), packet_tx);
+            message_id = Some(handle.get_message_id());
             handle.into_future().await
         };
 
@@ -268,6 +269,7 @@ mod tests {
         let received: Vec<_> = UnboundedReceiverStream::new(packet_rx).collect().await;
 
         assert_eq!(received.len(), 2);
+        assert_eq!(received[0].header.message_id, message_id.unwrap());
     }
 
     #[tokio::test(start_paused = true)]
