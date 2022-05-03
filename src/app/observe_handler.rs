@@ -110,7 +110,9 @@ impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
                     let self_clone = self.to_owned();
                     let path_key_clone = path_key.clone();
                     tokio::spawn(async move {
-                        self_clone.handle_on_active_lifecycle(path_key_clone, observers).await;
+                        self_clone
+                            .handle_on_active_lifecycle(path_key_clone, observers)
+                            .await;
                     });
 
                     RegistrationsForPath {
@@ -162,17 +164,13 @@ impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
         Err(())
     }
 
-    async fn handle_on_active_lifecycle(
-        &self,
-        path_key: String,
-        observers: Observers
-    ) {
-        let path_pretty = observers.relative_path();
-        log::debug!("entered OnFirstObserver for: {path_pretty}");
+    async fn handle_on_active_lifecycle(&self, path_key: String, observers: Observers) {
+        log::debug!("entered on_active for: {path_key}");
         self.resource.on_active(observers).await;
         match self.registrations_by_path.lock().await.remove(&path_key) {
             Some(for_path) => {
-                debug!("shutting down {} observers...", for_path.registrations.len());
+                let num_registrations = for_path.registrations.len();
+                debug!("{path_key}: shutting down {num_registrations} observers...");
                 for (_, internal_reg) in for_path.registrations {
                     let _ = Self::maybe_shutdown_single_observer(Some(internal_reg));
                 }
@@ -184,7 +182,7 @@ impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
                 warn!("Internal registration record removed without user consent, how???");
             }
         }
-        log::debug!("exit OnFirstObserver for: {path_pretty}");
+        log::debug!("exit on_active for: {path_key}");
     }
 }
 
