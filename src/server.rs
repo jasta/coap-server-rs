@@ -4,7 +4,7 @@ use std::pin::Pin;
 use coap_lite::Packet;
 use futures::stream::Fuse;
 use futures::{SinkExt, StreamExt};
-use log::{debug, error, warn};
+use log::{debug, error, trace, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::packet_handler::{IntoHandler, PacketHandler};
@@ -66,7 +66,7 @@ where
     ) -> Result<(), FatalServerError> {
         match result {
             Ok((packet, peer)) => {
-                debug!("Incoming packet from {peer:?}");
+                trace!("Incoming packet from {peer:?}");
                 self.do_handle_request(packet, peer)?
             }
             Err((transport_err, peer)) => {
