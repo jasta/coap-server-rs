@@ -4,7 +4,7 @@ use std::pin::Pin;
 use coap_lite::Packet;
 use futures::stream::Fuse;
 use futures::{SinkExt, StreamExt};
-use log::{debug, error, trace, warn};
+use log::{error, trace, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::packet_handler::{IntoHandler, PacketHandler};
