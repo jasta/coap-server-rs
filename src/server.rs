@@ -66,7 +66,7 @@ where
     ) -> Result<(), FatalServerError> {
         match result {
             Ok((packet, peer)) => {
-                trace!("Incoming packet from {peer:?}");
+                trace!("Incoming packet from {peer:?}: {packet:?}");
                 self.do_handle_request(packet, peer)?
             }
             Err((transport_err, peer)) => {
@@ -113,6 +113,7 @@ where
 
     async fn handle_packet_relay(&mut self, item: FramedItem<Endpoint>) {
         let peer = item.1.clone();
+        trace!("Outgoing packet to {:?}: {:?}", peer, item.0);
         if let Err(e) = self.binding.send(item).await {
             error!("Error sending to {peer:?}: {e:?}");
         }
