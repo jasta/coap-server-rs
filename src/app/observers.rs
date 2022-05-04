@@ -23,7 +23,7 @@ use tokio::sync::{watch, Mutex, RwLock};
 /// ```
 #[derive(Debug, Clone)]
 pub struct ObserversHolder {
-    inner: Arc<RwLock<PathMatcher<Observers>>>,
+    inner: Arc<RwLock<PathMatcher<Arc<Observers>>>>,
 }
 
 /// Handle that can be used to inform the server when changes are detected.
@@ -54,8 +54,9 @@ impl ObserversHolder {
     /// Attach a new [`Observers`] instance which affects how [`notify_change`] behaves.
     pub async fn attach(&self, observers: Observers) -> Attached<'_> {
         let key = observers.relative_path_key.clone();
-        self.inner.write().await.insert(key.clone(), observers);
-        Attached { key, holder: self }
+        let observers_arc = Arc::new(observers);
+        self.inner.write().await.insert(key.clone(), observers_arc.clone());
+        Attached { key, value: observers_arc, holder: self }
     }
 
     /// Defers to [`Observers::notify_change`] when attached; does nothing otherwise.
@@ -95,26 +96,21 @@ impl ObserversHolder {
 
 pub struct Attached<'a> {
     key: Vec<String>,
+    value: Arc<Observers>,
     holder: &'a ObserversHolder,
 }
 
 impl<'a> Attached<'a> {
     /// Keep an attached [`Observers`] instance active.  Panics if none is attached.
     pub async fn stay_active(&self) {
-        self.holder
-            .inner
-            .read()
-            .await
-            .lookup_exact(&self.key)
-            .unwrap()
-            .stay_active()
-            .await;
+        self.value.stay_active().await;
     }
 
     /// Detach and return the owned [`Observers`] instance, meant to be sent back to
     /// [`crate::app::ObservableResource::on_active`].
     pub async fn detach(self) -> Observers {
-        self.holder.inner.write().await.remove(&self.key).unwrap()
+        self.holder.inner.write().await.remove(&self.key).unwrap();
+        Arc::try_unwrap(self.value).unwrap()
     }
 }
 
