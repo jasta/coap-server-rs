@@ -1,17 +1,24 @@
+use alloc::string::String;
 use anyhow::anyhow;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::ops::RangeInclusive;
-use std::time::Duration;
+use core::fmt::{self, Debug};
+use core::hash::Hash;
+use core::ops::RangeInclusive;
+use core::time::Duration;
+use hashbrown::HashMap;
 
 use coap_lite::{MessageType, Packet};
+#[cfg(feature = "embassy")]
+use embassy_executor::time::Instant;
+#[cfg(feature = "embassy")]
+use embassy_util::channel::mpmc::DynamicSender as UnboundedSender;
 use log::debug;
 use rand::Rng;
-use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::watch;
-use tokio::time;
-use tokio::time::Instant;
+#[cfg(feature = "tokio")]
+use tokio::{
+    sync::mpsc::UnboundedSender,
+    sync::watch,
+    time::{self, Instant},
+};
 
 pub type MessageId = u16;
 
@@ -48,9 +55,10 @@ enum ReplyEvent {
 }
 
 impl<Endpoint: Debug + Clone + Eq + Hash> RetransmissionManager<Endpoint> {
-    pub fn new(parameters: TransmissionParameters) -> Self {
+    pub fn new<R: Rng>(parameters: TransmissionParameters, rng: &mut R) -> Self {
+        let next_message_id = rng.gen();
         Self {
-            next_message_id: rand::thread_rng().gen(),
+            next_message_id,
             unacknowledged_messages: Default::default(),
             parameters,
         }
@@ -81,12 +89,12 @@ impl<Endpoint: Debug + Clone + Eq + Hash> RetransmissionManager<Endpoint> {
     ///
     /// Note that this method mutates the packet that is to be sent to ensure it is Confirmable
     /// and has an appropriate message ID.  This ensures that the method is infallible.
-    pub fn send_reliably(
+    pub fn send_reliably<'r>(
         &mut self,
         mut packet: Packet,
         peer: Endpoint,
-        packet_tx: UnboundedSender<Packet>,
-    ) -> SendReliably<Endpoint> {
+        packet_tx: UnboundedSender<'r, Packet>,
+    ) -> SendReliably<'r, Endpoint> {
         packet.header.message_id = self.next_message_id;
         self.next_message_id = self.next_message_id.wrapping_add(1);
         packet.header.set_type(MessageType::Confirmable);
@@ -155,21 +163,21 @@ impl TransmissionParameters {
 }
 
 #[must_use = "don't forget to call into_future() and await it!"]
-pub struct SendReliably<Endpoint> {
+pub struct SendReliably<'a, Endpoint> {
     packet: Packet,
     peer: Endpoint,
-    packet_tx: UnboundedSender<Packet>,
+    packet_tx: UnboundedSender<'a, Packet>,
     parameters: TransmissionParameters,
     reply_rx: watch::Receiver<ReplyEvent>,
 }
 
-impl<Endpoint: Debug> SendReliably<Endpoint> {
+impl<Endpoint: Debug> SendReliably<'_, Endpoint> {
     pub fn get_message_id(&self) -> MessageId {
         self.packet.header.message_id
     }
 
-    pub async fn into_future(self) -> Result<(), SendFailed> {
-        let mut next_timeout = rand::thread_rng().gen_range(self.parameters.ack_timeout_range());
+    /*pub async fn into_future<R: Rng>(self, mut rng: R) -> Result<(), SendFailed> {
+        let mut next_timeout = rng.gen_range(self.parameters.ack_timeout_range());
         for attempt in 0..=self.parameters.max_retransmit {
             if attempt > 0 {
                 let retransmits = attempt - 1;
@@ -177,12 +185,13 @@ impl<Endpoint: Debug> SendReliably<Endpoint> {
                 let peer = &self.peer;
                 debug!("Attempting retransmission #{retransmits} of message ID {message_id} to {peer:?}");
             }
-            self.packet_tx
-                .send(self.packet.clone())
-                .map_err(anyhow::Error::msg)?;
-            let deadline = Instant::now() + next_timeout;
+            self.packet_tx.send(self.packet.clone()).await;
+            let deadline = Instant::now()
+                + embassy_executor::time::Duration::from_micros(
+                    next_timeout.as_micros().try_into().unwrap(),
+                );
             next_timeout *= 2;
-            loop {
+            /*loop {
                 let mut reply_rx = self.reply_rx.clone();
                 let timeout = time::timeout_at(deadline, reply_rx.changed());
                 match timeout.await {
@@ -201,25 +210,36 @@ impl<Endpoint: Debug> SendReliably<Endpoint> {
                     },
                     Err(_) => break,
                 };
-            }
+            }*/
+            todo!()
         }
         Err(SendFailed::NoReply(self.parameters.max_retransmit + 1))
+    }*/
+}
+
+#[derive(Debug)]
+pub enum SendFailed {
+    NoReply(usize),
+    Reset,
+    TransmissionError(anyhow::Error),
+    InternalError(String),
+}
+
+impl fmt::Display for SendFailed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoReply(attempts) => write!(f, "no remote reply after {} attempts", attempts),
+            Self::Reset => write!(f, "reset message received"),
+            Self::TransmissionError(err) => write!(f, "{}", err),
+            Self::InternalError(err) => write!(f, "internal error: {}", err),
+        }
     }
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum SendFailed {
-    #[error("no remote reply after {0} attempts")]
-    NoReply(usize),
-
-    #[error("reset message received")]
-    Reset,
-
-    #[error(transparent)]
-    TransmissionError(#[from] anyhow::Error),
-
-    #[error("internal error: {0}")]
-    InternalError(String),
+impl From<anyhow::Error> for SendFailed {
+    fn from(err: anyhow::Error) -> Self {
+        Self::TransmissionError(err)
+    }
 }
 
 impl<Endpoint: Debug + Clone + Eq + Hash> MessageKey<Endpoint> {
@@ -258,7 +278,7 @@ mod tests {
         let result = {
             let handle = manager.send_reliably(sent_packet, &TestEndpoint(123), packet_tx);
             message_id = Some(handle.get_message_id());
-            handle.into_future().await
+            handle.into_future(rand::thread_rng()).await
         };
 
         if let Err(SendFailed::NoReply(2)) = result {
@@ -292,7 +312,7 @@ mod tests {
             manager
                 .maybe_handle_reply(ack_packet, &TestEndpoint(123))
                 .unwrap();
-            handle.into_future().await
+            handle.into_future(rand::thread_rng()).await
         };
 
         result.unwrap();
@@ -316,7 +336,7 @@ mod tests {
             manager
                 .maybe_handle_reply(reset_packet, &TestEndpoint(123))
                 .unwrap();
-            handle.into_future().await
+            handle.into_future(rand::thread_rng()).await
         };
 
         if let Err(SendFailed::Reset) = result {

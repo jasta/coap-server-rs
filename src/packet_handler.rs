@@ -1,7 +1,9 @@
-use std::pin::Pin;
+use core::pin::Pin;
 
+use alloc::boxed::Box;
 use coap_lite::Packet;
 use futures::Stream;
+use rand::Rng;
 
 /// "Low-level" raw packet handler intended to support the full range of CoAP features.  This
 /// is little more than a callback informing the user that a packet has arrived, allowing for
@@ -17,18 +19,20 @@ pub trait PacketHandler<Endpoint>: Clone {
     ) -> Pin<Box<dyn Stream<Item = Packet> + Send + 'a>>;
 }
 
-pub trait IntoHandler<Handler, Endpoint>
+pub trait IntoHandler<Handler, Endpoint, R>
 where
     Handler: PacketHandler<Endpoint> + Send + 'static,
+    R: Rng + Send + Clone,
 {
-    fn into_handler(self, mtu: Option<u32>) -> Handler;
+    fn into_handler(self, mtu: Option<u32>, rng: R) -> Handler;
 }
 
-impl<Handler, Endpoint> IntoHandler<Handler, Endpoint> for Handler
+impl<Handler, Endpoint, R> IntoHandler<Handler, Endpoint, R> for Handler
 where
     Handler: PacketHandler<Endpoint> + Send + 'static,
+    R: Rng + Send + Clone,
 {
-    fn into_handler(self, _mtu: Option<u32>) -> Handler {
+    fn into_handler(self, _mtu: Option<u32>, rng: R) -> Handler {
         self
     }
 }

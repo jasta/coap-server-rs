@@ -1,5 +1,7 @@
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use coap_lite::error::IncompatibleOptionValueFormat;
 use coap_lite::option_value::OptionValueType;
 use coap_lite::{CoapOption, CoapRequest, MessageClass, MessageType, Packet};

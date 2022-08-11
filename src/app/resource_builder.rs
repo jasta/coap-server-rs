@@ -1,10 +1,15 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::Arc;
+use alloc::boxed::Box;
+use alloc::string::{String, ToString};
+use alloc::sync::Arc;
+use core::fmt::Debug;
+use core::hash::Hash;
+use hashbrown::HashMap;
 
 use coap_lite::link_format::LINK_ATTR_OBSERVABLE;
 use coap_lite::RequestType;
+#[cfg(feature = "embassy")]
+use embassy_util::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+#[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
 use crate::app::app_builder::ConfigBuilder;
@@ -172,7 +177,11 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceBuilder
 #[derive(Clone)]
 pub(crate) struct BuildParameters<Endpoint: Debug + Clone + Eq + Hash> {
     pub mtu: Option<u32>,
+    #[cfg(feature = "tokio")]
     pub retransmission_manager: Arc<Mutex<RetransmissionManager<Endpoint>>>,
+    #[cfg(feature = "embassy")]
+    pub retransmission_manager:
+        Arc<Mutex<CriticalSectionRawMutex, RetransmissionManager<Endpoint>>>,
 }
 
 #[derive(Clone)]

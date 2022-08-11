@@ -1,6 +1,7 @@
-use std::fmt::Debug;
-use std::{error, fmt};
+use core::fmt;
+use core::fmt::Debug;
 
+use alloc::string::{String, ToString};
 use coap_lite::error::HandlingError;
 use coap_lite::ResponseType;
 
@@ -51,7 +52,8 @@ impl fmt::Display for CoapError {
     }
 }
 
-impl error::Error for CoapError {}
+#[cfg(feature = "std")]
+impl std::error::Error for CoapError {}
 
 impl From<HandlingError> for CoapError {
     fn from(src: HandlingError) -> Self {

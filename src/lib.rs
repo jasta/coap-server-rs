@@ -31,14 +31,20 @@
 //!
 //! See other [examples](https://github.com/jasta/coap-server-rs/tree/main/examples) for more information.
 
+#![no_std]
+#![feature(type_alias_impl_trait)]
+
+#[macro_use]
+extern crate alloc;
+#[macro_use]
 extern crate core;
 
 pub use server::CoapServer;
 pub use server::FatalServerError;
-pub use udp::UdpTransport;
+// pub use udp::UdpTransport;
 
 pub mod app;
 pub mod packet_handler;
 pub mod server;
 pub mod transport;
-pub mod udp;
+// pub mod udp;
