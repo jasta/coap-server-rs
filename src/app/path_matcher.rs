@@ -18,6 +18,7 @@ impl<V> FromIterator<(Vec<String>, V)> for PathMatcher<V> {
     }
 }
 
+#[allow(dead_code)]
 impl<V> PathMatcher<V> {
     pub fn new_empty() -> Self {
         Self {

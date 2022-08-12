@@ -8,14 +8,11 @@ use rand::Rng;
 
 use coap_lite::{BlockHandler, CoapRequest, Packet};
 #[cfg(feature = "embassy")]
-use embassy_util::{
-    blocking_mutex::raw::CriticalSectionRawMutex, channel::mpmc::DynamicSender as UnboundedSender,
-    mutex::Mutex,
-};
-use log::debug;
+use embassy_util::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 #[cfg(feature = "tokio")]
 use tokio::sync::{mpsc::UnboundedSender, Mutex};
 
+#[cfg(feature = "observable")]
 use crate::app::observe_handler::{ObserveHandler, RegistrationEvent};
 use crate::app::request_handler::RequestHandler;
 use crate::app::request_type_key::RequestTypeKey;
@@ -24,13 +21,13 @@ use crate::app::{CoapError, Request};
 
 pub struct ResourceHandler<Endpoint: Debug + Clone + Ord + Eq + Hash> {
     pub handlers: HashMap<RequestTypeKey, Box<dyn RequestHandler<Endpoint> + Send + Sync>>,
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "tokio", feature = "observable"))]
     pub observe_handler: Option<Arc<Mutex<ObserveHandler<Endpoint>>>>,
     #[cfg(feature = "tokio")]
     pub block_handler: Option<Arc<Mutex<BlockHandler<Endpoint>>>>,
     #[cfg(feature = "tokio")]
     pub retransmission_manager: Arc<Mutex<RetransmissionManager<Endpoint>>>,
-    #[cfg(feature = "embassy")]
+    #[cfg(all(feature = "embassy", feature = "observable"))]
     pub observe_handler: Option<Arc<Mutex<CriticalSectionRawMutex, ObserveHandler<Endpoint>>>>,
     #[cfg(feature = "embassy")]
     pub block_handler: Option<Arc<Mutex<CriticalSectionRawMutex, BlockHandler<Endpoint>>>>,
@@ -48,6 +45,7 @@ impl<Endpoint: Debug + Clone + Ord + Eq + Hash> Clone for ResourceHandler<Endpoi
             .collect();
         Self {
             handlers,
+            #[cfg(feature = "observable")]
             observe_handler: self.observe_handler.clone(),
             block_handler: self.block_handler.clone(),
             retransmission_manager: self.retransmission_manager.clone(),
@@ -80,6 +78,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceHandler
     // these parts are especially expensive as it contains the request/response payloads and this
     // can be avoided by rethinking the Request/Response type system a bit and divorcing ourselves
     // from CoapRequest/CoapResponse.
+    #[cfg(feature = "observable")]
     async fn do_handle<R: Rng>(
         &self,
         handler: &Box<dyn RequestHandler<Endpoint> + Send + Sync>,
@@ -105,7 +104,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceHandler
 
         if let RegistrationEvent::Registered(mut receiver) = registration {
             debug!("Observe initiated by {:?}", initial_pair.source);
-            /*loop {
+            loop {
                 futures_util::select! {
                     _ = &mut receiver.termination_rx => {
                         debug!("Observe terminated by peer: {:?}", initial_pair.source);
@@ -161,10 +160,32 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceHandler
                         }
                     }
                 }
-            }*/
-
-            todo!()
+            }
         }
+
+        Ok(())
+    }
+
+    #[cfg(not(feature = "observable"))]
+    async fn do_handle<R: Rng>(
+        &self,
+        handler: &Box<dyn RequestHandler<Endpoint> + Send + Sync>,
+        out: &mut Vec<Packet>,
+        wrapped_request: Request<Endpoint>,
+        _rng: &mut R,
+    ) -> Result<(), CoapError> {
+        let mut initial_pair = wrapped_request.original.clone();
+        if !self.maybe_handle_block_request(&mut initial_pair).await? {
+            let fut = {
+                self.generate_and_assign_response(
+                    handler,
+                    &mut initial_pair,
+                    wrapped_request.clone(),
+                )
+            };
+            fut.await?
+        }
+        out.push(initial_pair.response.as_ref().unwrap().message.clone());
 
         Ok(())
     }
@@ -205,6 +226,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceHandler
         }
     }
 
+    #[cfg(feature = "observable")]
     async fn maybe_handle_observe_registration<R: Rng>(
         &self,
         request: &mut CoapRequest<Endpoint>,

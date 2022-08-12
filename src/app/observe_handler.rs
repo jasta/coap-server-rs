@@ -123,7 +123,7 @@ impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
                     let path_key_clone = path_key.clone();
                     /*tokio::spawn(async move {
                         self_clone
-                            .handle_on_active_lifecycle(path_key_clone, observers)
+                            .handle_on_active_lifecycle(path_key_cflone, observers)
                             .await;
                     });
 

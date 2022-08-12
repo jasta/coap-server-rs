@@ -4,8 +4,7 @@ use core::pin::Pin;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use coap_lite::Packet;
-use embassy_executor::executor::raw::TaskPool;
-use embassy_executor::executor::{SendSpawner, Spawner};
+use embassy_executor::executor::Spawner;
 use embassy_util::Either;
 #[cfg(feature = "embassy")]
 use embassy_util::{
@@ -13,9 +12,9 @@ use embassy_util::{
     channel::mpmc::{DynamicReceiver, DynamicSender},
 };
 use futures::stream::Fuse;
-use futures::{Future, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt};
 use log::{error, trace, warn};
-use rand::{Rng, RngCore};
+use rand::Rng;
 #[cfg(feature = "tokio")]
 use tokio::sync::mpsc::{Receiver, Sender};
 

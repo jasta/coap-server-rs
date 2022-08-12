@@ -32,7 +32,7 @@ where
     Handler: PacketHandler<Endpoint> + Send + 'static,
     R: Rng + Send + Clone,
 {
-    fn into_handler(self, _mtu: Option<u32>, rng: R) -> Handler {
+    fn into_handler(self, _mtu: Option<u32>, _rng: R) -> Handler {
         self
     }
 }

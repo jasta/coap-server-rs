@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use alloc::string::String;
 use anyhow::anyhow;
 use core::fmt::{self, Debug};
@@ -8,10 +10,7 @@ use hashbrown::HashMap;
 
 use coap_lite::{MessageType, Packet};
 #[cfg(feature = "embassy")]
-use embassy_executor::time::Instant;
-#[cfg(feature = "embassy")]
 use embassy_util::channel::mpmc::DynamicSender as UnboundedSender;
-use log::debug;
 use rand::Rng;
 #[cfg(feature = "tokio")]
 use tokio::{
@@ -176,7 +175,8 @@ impl<Endpoint: Debug> SendReliably<'_, Endpoint> {
         self.packet.header.message_id
     }
 
-    /*pub async fn into_future<R: Rng>(self, mut rng: R) -> Result<(), SendFailed> {
+    #[cfg(feature = "observable")]
+    pub async fn into_future<R: Rng>(self, mut rng: R) -> Result<(), SendFailed> {
         let mut next_timeout = rng.gen_range(self.parameters.ack_timeout_range());
         for attempt in 0..=self.parameters.max_retransmit {
             if attempt > 0 {
@@ -191,7 +191,7 @@ impl<Endpoint: Debug> SendReliably<'_, Endpoint> {
                     next_timeout.as_micros().try_into().unwrap(),
                 );
             next_timeout *= 2;
-            /*loop {
+            loop {
                 let mut reply_rx = self.reply_rx.clone();
                 let timeout = time::timeout_at(deadline, reply_rx.changed());
                 match timeout.await {
@@ -210,11 +210,10 @@ impl<Endpoint: Debug> SendReliably<'_, Endpoint> {
                     },
                     Err(_) => break,
                 };
-            }*/
-            todo!()
+            }
         }
         Err(SendFailed::NoReply(self.parameters.max_retransmit + 1))
-    }*/
+    }
 }
 
 #[derive(Debug)]
