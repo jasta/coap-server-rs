@@ -1,6 +1,11 @@
 use crate::app::path_matcher::{key_from_path, PathMatcher};
 use crate::app::u24::u24;
-use std::sync::Arc;
+use alloc::string::String;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+#[cfg(feature = "embassy")]
+use embassy_util::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+#[cfg(feature = "tokio")]
 use tokio::sync::{watch, Mutex, RwLock};
 
 /// Optional convenience mechanism to aid in managing dynamic [`Observers`] instances.
@@ -20,13 +25,16 @@ use tokio::sync::{watch, Mutex, RwLock};
 ///     }
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ObserversHolder {
+    #[cfg(feature = "tokio")]
     inner: Arc<RwLock<PathMatcher<Arc<Observers>>>>,
+    // Embassy has no RwLock currently.
+    #[cfg(feature = "embassy")]
+    inner: Arc<Mutex<CriticalSectionRawMutex, PathMatcher<Arc<Observers>>>>,
 }
 
 /// Handle that can be used to inform the server when changes are detected.
-#[derive(Debug)]
 pub struct Observers {
     relative_path_key: Vec<String>,
 
@@ -34,7 +42,10 @@ pub struct Observers {
 
     /// This will become the Observe value (i.e. the sequence number) if one is not provided
     /// by the handler directly.
+    #[cfg(feature = "tokio")]
     change_num: Arc<Mutex<u24>>,
+    #[cfg(feature = "embassy")]
+    change_num: Arc<Mutex<CriticalSectionRawMutex, u24>>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -44,9 +55,17 @@ pub enum NotificationState {
 }
 
 impl ObserversHolder {
+    #[cfg(feature = "tokio")]
     pub fn new() -> Self {
         Self {
             inner: Arc::new(RwLock::new(PathMatcher::new_empty())),
+        }
+    }
+
+    #[cfg(feature = "embassy")]
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(PathMatcher::new_empty())),
         }
     }
 
@@ -54,13 +73,20 @@ impl ObserversHolder {
     pub async fn attach(&self, observers: Observers) -> Attached<'_> {
         let key = observers.relative_path_key.clone();
         let observers_arc = Arc::new(observers);
-        self.inner.write().await.insert(key.clone(), observers_arc.clone());
-        Attached { key, value: observers_arc, holder: self }
+        self.inner
+            .lock()
+            .await
+            .insert(key.clone(), observers_arc.clone());
+        Attached {
+            key,
+            value: observers_arc,
+            holder: self,
+        }
     }
 
     /// Defers to [`Observers::notify_change`] when attached; does nothing otherwise.
     pub async fn notify_change(&self) {
-        for observers in self.inner.read().await.values() {
+        for observers in self.inner.lock().await.values() {
             observers.notify_change().await;
         }
     }
@@ -80,7 +106,7 @@ impl ObserversHolder {
     pub async fn notify_change_for_path(&self, relative_path: &str) {
         for result in self
             .inner
-            .read()
+            .lock()
             .await
             .match_all(&key_from_path(relative_path))
         {
@@ -104,8 +130,11 @@ impl<'a> Attached<'a> {
     /// Detach and return the owned [`Observers`] instance, meant to be sent back to
     /// [`crate::app::ObservableResource::on_active`].
     pub async fn detach(self) -> Observers {
-        self.holder.inner.write().await.remove(&self.key).unwrap();
-        Arc::try_unwrap(self.value).unwrap()
+        self.holder.inner.lock().await.remove(&self.key).unwrap();
+        match Arc::try_unwrap(self.value) {
+            Ok(v) => v,
+            Err(_) => panic!("detach error"),
+        }
     }
 }
 

@@ -1,3 +1,4 @@
+use alloc::{string::String, vec::Vec};
 use coap_lite::{CoapRequest, CoapResponse, RequestType, ResponseType};
 
 use crate::app::response::Response;

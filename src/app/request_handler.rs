@@ -1,7 +1,8 @@
 use crate::app::{CoapError, Request, Response};
+use alloc::boxed::Box;
 use async_trait::async_trait;
+use core::future::Future;
 use dyn_clone::DynClone;
-use std::future::Future;
 
 #[async_trait]
 pub trait RequestHandler<Endpoint>: DynClone + 'static {

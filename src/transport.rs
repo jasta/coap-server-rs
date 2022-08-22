@@ -1,10 +1,10 @@
+use alloc::{boxed::Box, string::String};
 use async_trait::async_trait;
 use coap_lite::error::MessageError;
 use coap_lite::Packet;
+use core::fmt::{self, Debug};
+use core::pin::Pin;
 use futures::{Sink, Stream};
-use std::fmt::Debug;
-use std::io;
-use std::pin::Pin;
 
 /// Generalization of the underlying CoAP transport, intended primarily to make it easy to support a
 /// wide range of protocols (TCP, DTLS, websockets, BLE, etc) but also to eventually support
@@ -60,14 +60,34 @@ pub type FramedWriteError = TransportError;
 /// Generalized errors indicating a range of transport-related issues such as being unable to bind,
 /// disconnections from remote peers, malformed input, etc.  Most of these errors are non-fatal
 /// and the server can happily continue serving other customers.
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug)]
 pub enum TransportError {
-    #[error("generic I/O error")]
-    IoError(#[from] Option<io::Error>),
-
-    #[error("packet was malformed")]
-    MalformedPacket(#[from] MessageError),
-
-    #[error("unspecified: {0}")]
+    #[cfg(feature = "std")]
+    IoError(Option<std::io::Error>),
+    MalformedPacket(MessageError),
     Unspecified(String),
+}
+
+impl fmt::Display for TransportError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            #[cfg(feature = "std")]
+            Self::IoError(_) => write!(f, "generic I/O error"),
+            Self::MalformedPacket(_) => write!(f, "packet was malformed"),
+            Self::Unspecified(err) => write!(f, "unspecified: {}", err),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl From<Option<std::io::Error>> for TransportError {
+    fn from(x: Option<std::io::Error>) -> Self {
+        Self::IoError(x)
+    }
+}
+
+impl From<MessageError> for TransportError {
+    fn from(x: MessageError) -> Self {
+        Self::MalformedPacket(x)
+    }
 }

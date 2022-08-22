@@ -3,14 +3,21 @@
 //! Supports handling incoming requests and manipulating outgoing responses transparently to
 //! semi-transparently handle Observe requests from clients in a reasonable and consistent way.
 
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::Arc;
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::hash::Hash;
+use hashbrown::HashMap;
 
 use coap_lite::{CoapRequest, ObserveOption};
+#[cfg(feature = "embassy")]
+use embassy_util::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use log::{debug, warn};
-use rand::RngCore;
+use rand::Rng;
+#[cfg(feature = "tokio")]
 use tokio::sync::{oneshot, watch, Mutex};
 
 use crate::app::observers::NotificationState;
@@ -22,7 +29,11 @@ use crate::app::{CoapError, ObservableResource, Observers};
 pub struct ObserveHandler<Endpoint> {
     path_prefix: String,
     resource: Arc<Box<dyn ObservableResource + Send + Sync>>,
+    #[cfg(feature = "tokio")]
     registrations_by_path: Arc<Mutex<HashMap<String, RegistrationsForPath<Endpoint>>>>,
+    #[cfg(feature = "embassy")]
+    registrations_by_path:
+        Arc<Mutex<CriticalSectionRawMutex, HashMap<String, RegistrationsForPath<Endpoint>>>>,
 }
 
 #[derive(Debug)]
@@ -57,9 +68,10 @@ impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
         }
     }
 
-    pub async fn maybe_process_registration(
+    pub async fn maybe_process_registration<R: Rng>(
         &self,
         request_response_pair: &mut CoapRequest<Endpoint>,
+        rng: &mut R,
     ) -> Result<RegistrationEvent, CoapError> {
         let observe_flag_result = request_response_pair.get_observe_flag();
         if observe_flag_result.is_none() {
@@ -99,7 +111,7 @@ impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
             ObserveOption::Register => {
                 let for_path = by_path.entry(path).or_insert_with_key(|path_key| {
                     let mut u24_bytes = [0u8; 3];
-                    rand::thread_rng().fill_bytes(&mut u24_bytes);
+                    rng.fill_bytes(&mut u24_bytes);
                     let relative_path = path_key.replace(&self.path_prefix, "");
                     let observers = Observers::new(
                         key_from_path(&relative_path),
@@ -109,16 +121,17 @@ impl<Endpoint: Eq + Hash + Clone + Send + 'static> ObserveHandler<Endpoint> {
 
                     let self_clone = self.to_owned();
                     let path_key_clone = path_key.clone();
-                    tokio::spawn(async move {
+                    /*tokio::spawn(async move {
                         self_clone
-                            .handle_on_active_lifecycle(path_key_clone, observers)
+                            .handle_on_active_lifecycle(path_key_cflone, observers)
                             .await;
                     });
 
                     RegistrationsForPath {
                         registrations: HashMap::new(),
                         notify_change_tx,
-                    }
+                    }*/
+                    todo!()
                 });
 
                 let notify_rx = for_path.notify_change_tx.subscribe();

@@ -1,21 +1,27 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::Arc;
+use alloc::boxed::Box;
+use alloc::string::{String, ToString};
+use alloc::sync::Arc;
+use core::fmt::Debug;
+use core::hash::Hash;
+use hashbrown::HashMap;
 
+#[cfg(feature = "observable")]
 use coap_lite::link_format::LINK_ATTR_OBSERVABLE;
 use coap_lite::RequestType;
+#[cfg(feature = "embassy")]
+use embassy_util::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+#[cfg(feature = "tokio")]
 use tokio::sync::Mutex;
 
 use crate::app::app_builder::ConfigBuilder;
 use crate::app::block_handler_util::new_block_handler;
 use crate::app::core_link::{CoreLink, LinkAttributeValue};
-use crate::app::observable_resource::ObservableResource;
-use crate::app::observe_handler::ObserveHandler;
 use crate::app::request_handler::RequestHandler;
 use crate::app::request_type_key::RequestTypeKey;
 use crate::app::resource_handler::ResourceHandler;
 use crate::app::retransmission_manager::RetransmissionManager;
+#[cfg(feature = "observable")]
+use crate::app::{observable_resource::ObservableResource, observe_handler::ObserveHandler};
 
 /// Configure a specific resource handler, potentially with distinct per-method handlers.
 pub struct ResourceBuilder<Endpoint: Ord + Clone> {
@@ -23,6 +29,7 @@ pub struct ResourceBuilder<Endpoint: Ord + Clone> {
     config: ConfigBuilder,
     attributes: CoreLink,
     handlers: HashMap<RequestTypeKey, Box<dyn RequestHandler<Endpoint> + Send + Sync>>,
+    #[cfg(feature = "observable")]
     observable: Option<Box<dyn ObservableResource + Send + Sync>>,
 }
 
@@ -33,6 +40,7 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceBuilder
             config: ConfigBuilder::default(),
             attributes: CoreLink::new(path),
             handlers: HashMap::new(),
+            #[cfg(feature = "observable")]
             observable: None,
         }
     }
@@ -40,6 +48,12 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceBuilder
     /// See [`crate::app::AppBuilder::not_discoverable`].
     pub fn not_discoverable(mut self) -> Self {
         self.config.discoverable = Some(false);
+        self
+    }
+
+    /// See [`crate::app::AppBuilder::enable_block_transfer`].
+    pub fn enable_block_transfer(mut self) -> Self {
+        self.config.block_transfer = Some(true);
         self
     }
 
@@ -129,11 +143,13 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceBuilder
     /// updates to be delivered to registered observers.
     ///
     /// For more information, see [RFC 7641](https://datatracker.ietf.org/doc/html/rfc7641)
+    #[cfg(feature = "observable")]
     pub fn observable(mut self, observable: impl ObservableResource + Send + Sync) -> Self {
         self.observable = Some(Box::new(observable));
         self.link_attr(LINK_ATTR_OBSERVABLE, ())
     }
 
+    #[cfg(feature = "observable")]
     pub(crate) fn build(self, params: BuildParameters<Endpoint>) -> Resource<Endpoint> {
         let discoverable = if self.config.discoverable.unwrap_or(true) {
             Some(DiscoverableResource::from(self.attributes))
@@ -167,12 +183,46 @@ impl<Endpoint: Debug + Clone + Eq + Hash + Ord + Send + 'static> ResourceBuilder
             handler,
         }
     }
+
+    #[cfg(not(feature = "observable"))]
+    pub(crate) fn build(self, params: BuildParameters<Endpoint>) -> Resource<Endpoint> {
+        let discoverable = if self.config.discoverable.unwrap_or(true) {
+            Some(DiscoverableResource::from(self.attributes))
+        } else {
+            None
+        };
+
+        let block_transfer = self
+            .config
+            .block_transfer
+            .unwrap_or(crate::app::app_handler::DEFAULT_BLOCK_TRANSFER);
+        let block_handler = if block_transfer {
+            Some(Arc::new(Mutex::new(new_block_handler(params.mtu))))
+        } else {
+            None
+        };
+
+        let handler = ResourceHandler {
+            handlers: self.handlers,
+            block_handler,
+            retransmission_manager: params.retransmission_manager,
+        };
+        Resource {
+            path: self.path,
+            discoverable,
+            handler,
+        }
+    }
 }
 
 #[derive(Clone)]
 pub(crate) struct BuildParameters<Endpoint: Debug + Clone + Eq + Hash> {
     pub mtu: Option<u32>,
+    #[cfg(feature = "tokio")]
     pub retransmission_manager: Arc<Mutex<RetransmissionManager<Endpoint>>>,
+    #[cfg(feature = "embassy")]
+    pub retransmission_manager:
+        Arc<Mutex<CriticalSectionRawMutex, RetransmissionManager<Endpoint>>>,
 }
 
 #[derive(Clone)]

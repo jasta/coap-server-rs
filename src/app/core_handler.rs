@@ -1,7 +1,10 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::Arc;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::hash::Hash;
+use hashbrown::HashMap;
 
 use async_trait::async_trait;
 use coap_lite::{ContentFormat, ResponseType};

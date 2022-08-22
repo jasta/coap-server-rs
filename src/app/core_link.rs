@@ -1,9 +1,12 @@
 use crate::app::resource_builder::DiscoverableResource;
+use alloc::boxed::Box;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use coap_lite::link_format::{LinkAttributeWrite, LinkFormatWrite};
 use coap_lite::ContentFormat;
+use core::fmt::{Debug, Error, Write};
 use dyn_clone::DynClone;
-use std::collections::HashMap;
-use std::fmt::{Debug, Error, Write};
+use hashbrown::HashMap;
 
 #[derive(Default, Debug)]
 pub struct CoreLink {
