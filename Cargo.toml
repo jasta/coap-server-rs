@@ -11,7 +11,7 @@ keywords = ["coap", "server", "async", "IoT"]
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.17.0", features = ["full"] }
+tokio = { version = "1.17.0", features = ["rt", "macros", "net"] }
 tokio-stream = "0.1.8"
 tokio-util = { version = "0.7.0", features = ["codec", "net"] }
 bytes = "1.1.0"
@@ -29,4 +29,4 @@ rand = "0.8.5"
 
 [dev-dependencies]
 async-stream = "0.3.3"
-tokio = { version = "1.17.0", features = ["test-util"] }
+tokio = { version = "1.17.0", features = ["test-util", "rt-multi-thread"] }
