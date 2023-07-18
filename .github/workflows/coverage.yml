@@ -24,6 +24,7 @@ jobs:
     - name: Run tarpaulin
       uses: actions-rs/tarpaulin@v0.1
       with:
+        version: '0.26.1'
         out-type: Lcov
         args: '--avoid-cfg-tarpaulin'
 
