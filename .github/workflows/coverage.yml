@@ -22,7 +22,7 @@ jobs:
         override: true
 
     - name: Run tarpaulin
-      uses: actions-rs/tarpaulin@v0.1
+      uses: FreeMasen/tarpaulin-action@9f7e03f06fea8f374c85a95c2ecff6a4d5805845
       with:
         version: '0.26.1'
         out-type: Lcov
