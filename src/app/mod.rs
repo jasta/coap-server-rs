@@ -6,8 +6,8 @@ pub use observers::ObserversHolder;
 pub use request::Request;
 pub use resource_builder::ResourceBuilder;
 pub use response::Response;
-use std::fmt::Debug;
-use std::hash::Hash;
+use core::fmt::Debug;
+use core::hash::Hash;
 
 pub mod app_builder;
 pub mod app_handler;

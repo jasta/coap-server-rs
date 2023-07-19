@@ -2,9 +2,11 @@ use async_trait::async_trait;
 use coap_lite::error::MessageError;
 use coap_lite::Packet;
 use futures::{Sink, Stream};
-use std::fmt::Debug;
-use std::io;
-use std::pin::Pin;
+use core::fmt::Debug;
+use core::pin::Pin;
+use alloc::boxed::Box;
+use alloc::string::String;
+use crate::io_error::IoError;
 
 /// Generalization of the underlying CoAP transport, intended primarily to make it easy to support a
 /// wide range of protocols (TCP, DTLS, websockets, BLE, etc) but also to eventually support
@@ -60,10 +62,10 @@ pub type FramedWriteError = TransportError;
 /// Generalized errors indicating a range of transport-related issues such as being unable to bind,
 /// disconnections from remote peers, malformed input, etc.  Most of these errors are non-fatal
 /// and the server can happily continue serving other customers.
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror_no_std::Error, Debug)]
 pub enum TransportError {
     #[error("generic I/O error")]
-    IoError(#[from] Option<io::Error>),
+    IoError(#[from] Option<IoError>),
 
     #[error("packet was malformed")]
     MalformedPacket(#[from] MessageError),

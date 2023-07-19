@@ -31,14 +31,20 @@
 //!
 //! See other [examples](https://github.com/jasta/coap-server-rs/tree/main/examples) for more information.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 extern crate core;
+extern crate alloc;
 
 pub use server::CoapServer;
 pub use server::FatalServerError;
+#[cfg(feature = "std")]
 pub use udp::UdpTransport;
 
 pub mod app;
 pub mod packet_handler;
 pub mod server;
 pub mod transport;
+#[cfg(feature = "std")]
 pub mod udp;
+pub mod io_error;

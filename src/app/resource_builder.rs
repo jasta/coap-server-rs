@@ -1,7 +1,10 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::Arc;
+use hashbrown::HashMap;
+use core::fmt::Debug;
+use core::hash::Hash;
+use alloc::sync::Arc;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::boxed::Box;
 
 use coap_lite::link_format::LINK_ATTR_OBSERVABLE;
 use coap_lite::RequestType;

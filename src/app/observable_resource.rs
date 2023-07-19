@@ -1,3 +1,5 @@
+use alloc::boxed::Box;
+
 use async_trait::async_trait;
 
 use crate::app::observers::Observers;

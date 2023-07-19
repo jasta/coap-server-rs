@@ -1,5 +1,6 @@
-use std::fmt::Debug;
-use std::hash::Hash;
+use core::fmt::Debug;
+use core::hash::Hash;
+use alloc::vec::Vec;
 
 use crate::app::app_handler::AppHandler;
 use crate::app::ResourceBuilder;

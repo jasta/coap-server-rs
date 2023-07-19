@@ -1,5 +1,8 @@
-use std::fmt::Debug;
-use std::pin::Pin;
+use core::fmt::Debug;
+use core::pin::Pin;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::string::ToString;
 
 use coap_lite::Packet;
 use futures::stream::Fuse;
@@ -122,7 +125,7 @@ where
 
 /// Fatal error preventing the server from starting or continuing.  Typically the result of
 /// programmer error or misconfiguration.
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror_no_std::Error, Debug)]
 pub enum FatalServerError {
     /// Programmer error within this crate, file a bug!
     #[error("internal error: {0}")]

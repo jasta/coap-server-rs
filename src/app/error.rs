@@ -1,5 +1,7 @@
-use std::fmt::Debug;
-use std::{error, fmt};
+use core::fmt;
+use core::fmt::{Display, Debug, Formatter};
+use alloc::string::String;
+use alloc::string::ToString;
 
 use coap_lite::error::HandlingError;
 use coap_lite::ResponseType;
@@ -45,13 +47,14 @@ impl CoapError {
     }
 }
 
-impl fmt::Display for CoapError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for CoapError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "Handling error {:?}: {}", self.code, self.message)
     }
 }
 
-impl error::Error for CoapError {}
+#[cfg(feature = "std")]
+impl std::error::Error for CoapError {}
 
 impl From<HandlingError> for CoapError {
     fn from(src: HandlingError) -> Self {

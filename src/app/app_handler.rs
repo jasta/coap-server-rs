@@ -1,8 +1,10 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::pin::Pin;
-use std::sync::Arc;
+use hashbrown::HashMap;
+use core::fmt::Debug;
+use core::hash::Hash;
+use core::pin::Pin;
+use alloc::sync::Arc;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 use coap_lite::{BlockHandler, CoapRequest, MessageClass, MessageType, Packet};
 use futures::Stream;
