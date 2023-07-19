@@ -1,7 +1,8 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::Arc;
+use hashbrown::HashMap;
+use core::fmt::Debug;
+use core::hash::Hash;
+use alloc::sync::Arc;
+use alloc::boxed::Box;
 
 use coap_lite::{BlockHandler, CoapOption, CoapRequest, MessageType, Packet};
 use log::debug;

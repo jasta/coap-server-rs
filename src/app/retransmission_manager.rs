@@ -1,9 +1,11 @@
 use anyhow::anyhow;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::ops::RangeInclusive;
-use std::time::Duration;
+use hashbrown::HashMap;
+use core::fmt::Debug;
+use core::hash::Hash;
+use core::ops::RangeInclusive;
+use core::time::Duration;
+use alloc::format;
+use alloc::string::String;
 
 use coap_lite::{MessageType, Packet};
 use log::debug;
@@ -207,7 +209,7 @@ impl<Endpoint: Debug> SendReliably<Endpoint> {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror_no_std::Error, Debug)]
 pub enum SendFailed {
     #[error("no remote reply after {0} attempts")]
     NoReply(usize),

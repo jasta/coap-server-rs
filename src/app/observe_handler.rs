@@ -3,10 +3,14 @@
 //! Supports handling incoming requests and manipulating outgoing responses transparently to
 //! semi-transparently handle Observe requests from clients in a reasonable and consistent way.
 
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::sync::Arc;
+use hashbrown::HashMap;
+use core::fmt::Debug;
+use core::hash::Hash;
+use alloc::sync::Arc;
+use alloc::string::String;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use alloc::borrow::ToOwned;
 
 use coap_lite::{CoapRequest, ObserveOption};
 use log::{debug, warn};

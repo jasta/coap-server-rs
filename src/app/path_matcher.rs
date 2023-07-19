@@ -1,5 +1,8 @@
-use std::collections::hash_map::Values;
-use std::collections::HashMap;
+use hashbrown::hash_map::Values;
+use hashbrown::HashMap;
+use alloc::vec::Vec;
+use alloc::string::String;
+use alloc::string::ToString;
 
 /// Lookup mechanism that uses inexact matching of input paths by finding the most specific
 /// match and returning that instead.  See [`PathMatcher::lookup`] for more information.

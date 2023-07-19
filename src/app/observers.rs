@@ -1,6 +1,8 @@
 use crate::app::path_matcher::{key_from_path, PathMatcher};
 use crate::app::u24::u24;
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use alloc::string::String;
 use tokio::sync::{watch, Mutex, RwLock};
 
 /// Optional convenience mechanism to aid in managing dynamic [`Observers`] instances.

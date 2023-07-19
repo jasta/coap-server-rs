@@ -1,4 +1,8 @@
-use std::collections::HashMap;
+use hashbrown::HashMap;
+use alloc::format;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
 
 use coap_lite::error::IncompatibleOptionValueFormat;
 use coap_lite::option_value::OptionValueType;

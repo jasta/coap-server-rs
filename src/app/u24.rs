@@ -1,7 +1,8 @@
 //! Bit of a toy implementation of a "proper" u24 representation.  Isn't learning Rust fun? :)
 
-use std::fmt::{Debug, Display, Formatter};
-use std::ops::{Add, AddAssign};
+use core::fmt::{Debug, Display, Formatter};
+use core::fmt;
+use core::ops::{Add, AddAssign};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -38,13 +39,13 @@ impl u24 {
 }
 
 impl Display for u24 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.0, f)
     }
 }
 
 impl Debug for u24 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
@@ -127,7 +128,7 @@ impl From<u24> for u64 {
 pub struct TryFromCustomIntError;
 
 impl Display for TryFromCustomIntError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str("out of range integral type conversion attempted")
     }
 }

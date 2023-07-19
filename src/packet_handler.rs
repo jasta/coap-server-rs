@@ -1,4 +1,5 @@
-use std::pin::Pin;
+use core::pin::Pin;
+use alloc::boxed::Box;
 
 use coap_lite::Packet;
 use futures::Stream;
