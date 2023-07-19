@@ -12,6 +12,7 @@ edition = "2021"
 
 [features]
 default = ["std"]
+# TODO: currently required to use std!
 std = ["rand/std", "rand/std_rng", "anyhow/std", "coap-lite/std", "bytes/std", "futures/std"]
 
 [dependencies]
