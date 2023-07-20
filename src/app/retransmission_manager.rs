@@ -6,6 +6,7 @@ use core::ops::RangeInclusive;
 use core::time::Duration;
 use alloc::format;
 use alloc::string::String;
+use std::ops::Deref;
 
 use coap_lite::{MessageType, Packet};
 use log::debug;
@@ -13,7 +14,6 @@ use rand::Rng;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::watch;
 use tokio::time;
-use tokio::time::Instant;
 
 pub type MessageId = u16;
 
@@ -182,27 +182,30 @@ impl<Endpoint: Debug> SendReliably<Endpoint> {
             self.packet_tx
                 .send(self.packet.clone())
                 .map_err(anyhow::Error::msg)?;
-            let deadline = Instant::now() + next_timeout;
+            let curr_timeout = next_timeout;
             next_timeout *= 2;
             loop {
                 let mut reply_rx = self.reply_rx.clone();
-                let timeout = time::timeout_at(deadline, reply_rx.changed());
-                match timeout.await {
-                    Ok(_) => match reply_rx.borrow().clone() {
-                        ReplyEvent::None => {}
-                        ReplyEvent::PeerResponse(t) if t == MessageType::Acknowledgement => {
-                            return Ok(());
+                let timeout = time::sleep(curr_timeout);
+
+                tokio::select! {
+                    _ = reply_rx.changed() => {
+                        match reply_rx.borrow().deref() {
+                            ReplyEvent::None => {}
+                            ReplyEvent::PeerResponse(t) if t == &MessageType::Acknowledgement => {
+                                return Ok(());
+                            }
+                            ReplyEvent::PeerResponse(t) if t == &MessageType::Reset => {
+                                return Err(SendFailed::Reset);
+                            }
+                            ReplyEvent::PeerResponse(t) => {
+                                return Err(SendFailed::InternalError(format!("unexpected t={t:?}")));
+                            }
+                            ReplyEvent::InternalError(e) => return Err(SendFailed::InternalError(e.to_owned())),
                         }
-                        ReplyEvent::PeerResponse(t) if t == MessageType::Reset => {
-                            return Err(SendFailed::Reset);
-                        }
-                        ReplyEvent::PeerResponse(t) => {
-                            return Err(SendFailed::InternalError(format!("unexpected t={t:?}")));
-                        }
-                        ReplyEvent::InternalError(e) => return Err(SendFailed::InternalError(e)),
-                    },
-                    Err(_) => break,
-                };
+                    }
+                    _ = timeout => break,
+                }
             }
         }
         Err(SendFailed::NoReply(self.parameters.max_retransmit + 1))
