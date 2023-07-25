@@ -1,5 +1,5 @@
 [package]
-name = "examples-tokio"
+name = "examples"
 version = "0.0.0"
 authors = ["Josh Guilfoyle <jasta@devtcg.org>"]
 edition = "2021"
