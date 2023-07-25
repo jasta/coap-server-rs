@@ -9,7 +9,8 @@ use log::info;
 
 use coap_server::packet_handler::PacketHandler;
 use coap_server::server::FatalServerError;
-use coap_server::{CoapServer, UdpTransport};
+use coap_server::CoapServer;
+use coap_server_tokio::transport::udp::UdpTransport;
 
 #[tokio::main]
 async fn main() -> Result<(), FatalServerError> {

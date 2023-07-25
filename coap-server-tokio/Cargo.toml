@@ -1,13 +1,18 @@
 [package]
-name = "examples-tokio"
-version = "0.0.0"
+name = "coap-server-tokio"
+version = "0.1.2"
+description = "Robust async CoAP server (tokio support)"
 authors = ["Josh Guilfoyle <jasta@devtcg.org>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/jasta/coap-server-rs"
+categories = ["network-programming"]
+keywords = ["coap", "server", "async", "IoT"]
 edition = "2021"
 
-[dev-dependencies]
+[dependencies]
 coap-server = { path = "../coap-server" }
-coap-server-tokio = { path = "../coap-server-tokio" }
-tokio = { version = "1.17.0", features = ["rt", "rt-multi-thread", "macros", "net"] }
+tokio = { version = "1.17.0", features = ["rt", "macros", "net"] }
 tokio-stream = "0.1.8"
 tokio-util = { version = "0.7.0", features = ["codec", "net"] }
 bytes = { version = "1.1.0", default-features = false }
@@ -21,29 +26,8 @@ log = "0.4.16"
 coap-lite = { version = "0.9.0", default-features = false }
 rand = { version = "0.8.5", features = [ "alloc" ] }
 hashbrown = "0.14.0"
+
+[dev-dependencies]
 async-stream = "0.3.3"
+tokio = { version = "1.17.0", features = ["test-util", "rt-multi-thread"] }
 env_logger = "0.9.0"
-
-[[example]]
-name = "app_basic"
-path = "app_basic.rs"
-
-[[example]]
-name = "app_default_handler"
-path = "app_default_handler.rs"
-
-[[example]]
-name = "app_observable"
-path = "app_observable.rs"
-
-[[example]]
-name = "custom_non_piggybacked_service"
-path = "custom_non_piggybacked_service.rs"
-
-[[example]]
-name = "custom_service"
-path = "custom_service.rs"
-
-[[example]]
-name = "udp_multicast"
-path = "udp_multicast.rs"
