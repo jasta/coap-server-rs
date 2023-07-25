@@ -1,0 +1,52 @@
+[package]
+name = "examples-tokio"
+version = "0.0.0"
+authors = ["Josh Guilfoyle <jasta@devtcg.org>"]
+edition = "2021"
+
+[dev-dependencies]
+coap-server = { path = "../coap-server" }
+tokio = { version = "1.17.0", features = ["rt", "rt-multi-thread", "macros", "net"] }
+tokio-stream = "0.1.8"
+tokio-util = { version = "0.7.0", features = ["codec", "net"] }
+bytes = { version = "1.1.0", default-features = false }
+futures = { version = "0.3.21", default-features = false }
+async-trait = "0.1.53"
+pin-project = "1.0.10"
+dyn-clone = "1.0.5"
+anyhow = { version = "1.0.56", default-features = false }
+thiserror-no-std = { version = "2.0.2", default-features = false }
+log = "0.4.16"
+coap-lite = { version = "0.9.0", default-features = false }
+rand = { version = "0.8.5", features = [ "alloc" ] }
+hashbrown = "0.14.0"
+async-stream = "0.3.3"
+env_logger = "0.9.0"
+
+[[example]]
+name = "app_basic"
+path = "app_basic.rs"
+
+[[example]]
+name = "app_default_handler"
+path = "app_default_handler.rs"
+
+[[example]]
+name = "app_observable"
+path = "app_observable.rs"
+
+[[example]]
+name = "Cargo.t"
+path = "Cargo.toml"
+
+[[example]]
+name = "custom_non_piggybacked_service"
+path = "custom_non_piggybacked_service.rs"
+
+[[example]]
+name = "custom_service"
+path = "custom_service.rs"
+
+[[example]]
+name = "udp_multicast"
+path = "udp_multicast.rs"
