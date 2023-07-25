@@ -26,7 +26,7 @@ where
     Handler: PacketHandler<Endpoint> + Send + 'static,
 {
     /// Bind the server to a specific source of incoming packets in a transport-agnostic way.  Most
-    /// customers will wish to use [`crate::udp::UdpTransport`].
+    /// customers will wish to use [`crate::transport::UdpTransport`].
     pub async fn bind<T: Transport<Endpoint = Endpoint>>(
         transport: T,
     ) -> Result<Self, TransportError> {

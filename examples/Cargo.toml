@@ -6,6 +6,7 @@ edition = "2021"
 
 [dev-dependencies]
 coap-server = { path = "../coap-server" }
+coap-server-tokio = { path = "../coap-server-tokio" }
 tokio = { version = "1.17.0", features = ["rt", "rt-multi-thread", "macros", "net"] }
 tokio-stream = "0.1.8"
 tokio-util = { version = "0.7.0", features = ["codec", "net"] }

@@ -1,8 +1,7 @@
-use std::io;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::io;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-
 use async_trait::async_trait;
 use bytes::BytesMut;
 use coap_lite::Packet;
@@ -11,11 +10,8 @@ use log::debug;
 use pin_project::pin_project;
 use tokio::net::{ToSocketAddrs, UdpSocket};
 use tokio_util::codec::{Decoder, Encoder};
-
-use crate::transport::{BoxedFramedBinding, FramedBinding, Transport, TransportError};
-use crate::udp::udp_framed_fork::UdpFramed;
-
-pub(crate) mod udp_framed_fork;
+use coap_server::transport::{BoxedFramedBinding, FramedBinding, Transport, TransportError};
+use crate::transport::udp_framed_fork::UdpFramed;
 
 /// Default CoAP transport as originally defined in RFC 7252.  Likely this is what you want if
 /// you're new to CoAP.
@@ -213,5 +209,33 @@ impl Encoder<Packet> for Codec {
     fn encode(&mut self, my_packet: Packet, buf: &mut BytesMut) -> Result<(), TransportError> {
         buf.extend_from_slice(&my_packet.to_bytes()?[..]);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use coap_lite::{CoapOption, MessageClass, RequestType};
+    use futures::{SinkExt, StreamExt};
+    use super::*;
+
+    #[tokio::test]
+    pub async fn udp_smoke() {
+        let target_addr = "127.0.0.1";
+        let target_port = 12345;
+        let target_addr_port = format!("{target_addr}:{target_port}");
+        let transport = UdpTransport::new(&target_addr_port);
+        let mut binding = transport.bind().await.unwrap();
+        let mut expected = Packet::new();
+        expected.header.code = MessageClass::Request(RequestType::Get);
+        expected.add_option(CoapOption::UriPath, b"hello".to_vec());
+        let expected_bytes = expected.to_bytes().unwrap();
+        let sender = UdpSocket::bind(format!("{target_addr}:0")).await.unwrap();
+        let sent_bytes = sender.send_to(&expected_bytes, &target_addr_port).await.unwrap();
+        assert_eq!(sent_bytes, expected_bytes.len());
+
+        let received = binding.next().await.unwrap().unwrap();
+        let received_bytes = received.0.to_bytes().unwrap();
+        assert_eq!(received.1.ip().to_string(), target_addr);
+        assert_eq!(received_bytes, expected_bytes);
     }
 }

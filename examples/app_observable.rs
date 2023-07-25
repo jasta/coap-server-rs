@@ -12,7 +12,8 @@ use tokio::time;
 use coap_server::app::ObservableResource;
 use coap_server::app::{AppBuilder, CoapError, Observers, ObserversHolder, Request, Response};
 use coap_server::FatalServerError;
-use coap_server::{app, CoapServer, UdpTransport};
+use coap_server::{app, CoapServer};
+use coap_server_tokio::transport::udp::UdpTransport;
 
 #[tokio::main]
 async fn main() -> Result<(), FatalServerError> {

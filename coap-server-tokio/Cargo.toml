@@ -1,7 +1,7 @@
 [package]
-name = "coap-server"
+name = "coap-server-tokio"
 version = "0.1.2"
-description = "Robust async CoAP server"
+description = "Robust async CoAP server (tokio support)"
 authors = ["Josh Guilfoyle <jasta@devtcg.org>"]
 license = "MIT"
 readme = "README.md"
@@ -10,15 +10,11 @@ categories = ["network-programming"]
 keywords = ["coap", "server", "async", "IoT"]
 edition = "2021"
 
-[features]
-default = ["std"]
-# TODO: currently required to use std!
-std = ["rand/std", "rand/std_rng", "anyhow/std", "coap-lite/std", "bytes/std", "futures/std"]
-
 [dependencies]
-tokio = { version = "1.17.0", features = ["rt", "macros"] }
+coap-server = { path = "../coap-server" }
+tokio = { version = "1.17.0", features = ["rt", "macros", "net"] }
 tokio-stream = "0.1.8"
-tokio-util = { version = "0.7.0", features = ["codec"] }
+tokio-util = { version = "0.7.0", features = ["codec", "net"] }
 bytes = { version = "1.1.0", default-features = false }
 futures = { version = "0.3.21", default-features = false }
 async-trait = "0.1.53"
@@ -30,3 +26,8 @@ log = "0.4.16"
 coap-lite = { version = "0.9.0", default-features = false }
 rand = { version = "0.8.5", features = [ "alloc" ] }
 hashbrown = "0.14.0"
+
+[dev-dependencies]
+async-stream = "0.3.3"
+tokio = { version = "1.17.0", features = ["test-util", "rt-multi-thread"] }
+env_logger = "0.9.0"
