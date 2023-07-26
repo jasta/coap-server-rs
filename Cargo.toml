@@ -3,5 +3,6 @@ resolver = "2"
 members = [
   "coap-server",
   "coap-server-tokio",
+  "coap-server-embassy",
   "examples",
 ]

@@ -1,0 +1,37 @@
+[package]
+name = "coap-server-embassy"
+version = "0.1.2"
+description = "Robust async CoAP server (embassy support)"
+authors = ["Josh Guilfoyle <jasta@devtcg.org>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/jasta/coap-server-rs"
+categories = ["network-programming"]
+keywords = ["coap", "server", "async", "IoT"]
+edition = "2021"
+
+[features]
+default = ["net"]
+net = ["embassy-net", "smoltcp"]
+
+[dependencies]
+coap-server = { path = "../coap-server" }
+embassy-net = { version = "0.1.0", features = ["udp", "proto-ipv4", "medium-ethernet"], optional = true }
+smoltcp = { version = "0.10.0", features = ["socket-udp", "proto-ipv4", "medium-ethernet"], default-features = false, optional = true }
+bytes = { version = "1.1.0", default-features = false }
+futures = { version = "0.3.21", default-features = false }
+async-trait = "0.1.53"
+pin-project = "1.0.10"
+log = "0.4.16"
+coap-lite = { version = "0.9.0", default-features = false }
+
+[dev-dependencies]
+embassy-executor = { version = "0.2.0", features = ["arch-std", "executor-thread", "log", "nightly", "integrated-timers"] }
+embassy-time = { version = "0.1.2", features = ["std"] }
+embassy-net-driver-channel = "0.1.0"
+embassy-sync = { version = "0.2.0", features = ["std"] }
+embassy-futures = "0.1.0"
+static_cell = { version = "1.2.0", features = ["nightly"] }
+env_logger = "0.9.0"
+rand = "0.8.5"
+heapless = "0.7.16"
