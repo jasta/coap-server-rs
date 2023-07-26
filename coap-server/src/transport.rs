@@ -34,8 +34,7 @@ pub type BoxedFramedBinding<Endpoint> = Pin<Box<dyn FramedBinding<Endpoint>>>;
 /// the abstraction doesn't have an additional layer for accepting an incoming connection.  For
 /// UDP there is no such concept and framed items can simply arrive at any time from any source.
 pub trait FramedBinding<Endpoint>:
-    Send
-    + Stream<Item = Result<FramedItem<Endpoint>, FramedReadError<Endpoint>>>
+    Stream<Item = Result<FramedItem<Endpoint>, FramedReadError<Endpoint>>>
     + Sink<FramedItem<Endpoint>, Error = FramedWriteError>
 {
     /// Access the link's MTU which can be used to determine things like the ideal block
