@@ -26,7 +26,8 @@ like IoT devices.
 
 ```rust
 use coap_server::app::{CoapError, Request, Response};
-use coap_server::{app, CoapServer, FatalServerError, UdpTransport};
+use coap_server::{app, CoapServer, FatalServerError};
+use coap_server_tokio::transport::udp::UdpTransport;
 
 #[tokio::main]
 async fn main() -> Result<(), FatalServerError> {
