@@ -1,6 +1,6 @@
 use core::pin::Pin;
 use core::task::{ready, Context, Poll};
-use std::pin::pin;
+use core::pin::pin;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use coap_lite::Packet;
