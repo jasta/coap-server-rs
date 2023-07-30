@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Run tarpaulin
-      run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Lcov --avoid-cfg-tarpaulin
+      run: cargo tarpaulin --verbose --all-features --timeout 120 --out Lcov --avoid-cfg-tarpaulin
     - name: Coveralls Upload
       uses: coverallsapp/github-action@1.1.3
       with:
