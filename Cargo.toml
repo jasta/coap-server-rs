@@ -6,3 +6,8 @@ members = [
   "coap-server-embassy",
   "examples",
 ]
+default-members = [
+  "coap-server",
+  "coap-server-tokio",
+  "examples",
+]
