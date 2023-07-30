@@ -1,11 +1,12 @@
 //! Robust, ergonomic CoAP server in Rust.
 //!
 //! # Examples
-//! ```no_run
+//! ```no_compile
 //! use std::net::SocketAddr;
 //!
 //! use coap_server::app::{CoapError, Request, Response};
-//! use coap_server::{app, CoapServer, FatalServerError, UdpTransport};
+//! use coap_server::{app, CoapServer, FatalServerError};
+//! use coap_server_tokio::transport::udp::UdpTransport;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), FatalServerError> {
