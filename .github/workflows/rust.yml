@@ -10,15 +10,30 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  TestStable:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --all-features
     - name: Run tests
-      run: cargo test --verbose
-    - name: Test coap-server-embassy
-      run: cargo +nightly test --workspace -p coap-server-embassy --verbose
+      run: cargo test --all-features
+  TestNightly:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@nightly
+    - name: Build
+      run: cargo build --all-features
+    - name: Tests
+      run: cargo test --all-features 
+    - name: Tests (embassy)
+      run: cargo test --all-features --workspace -p coap-server-embassy
+  Passed:
+    runs-on: ubuntu-latest
+    needs:
+      - Test
+      - TestNightly
+    steps:
+      - run: exit 0
