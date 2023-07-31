@@ -13,7 +13,7 @@ edition = "2021"
 [features]
 default = ["std"]
 # TODO: currently required to use std!
-std = ["rand/std", "rand/std_rng", "anyhow/std", "coap-lite/std", "futures/std"]
+std = ["rand/std", "rand/std_rng", "anyhow/std", "coap-lite/std", "futures/std", "thiserror"]
 
 [dependencies]
 tokio = { version = "1.17.0", features = ["rt", "macros"] }
@@ -22,6 +22,7 @@ futures = { version = "0.3.21", default-features = false }
 async-trait = "0.1.53"
 dyn-clone = "1.0.5"
 anyhow = { version = "1.0.56", default-features = false }
+thiserror = { version = "1.0.43", optional = true }
 thiserror-no-std = { version = "2.0.2", default-features = false }
 log = "0.4.16"
 coap-lite = { version = "0.9.0", default-features = false }

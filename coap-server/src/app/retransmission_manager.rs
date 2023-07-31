@@ -212,7 +212,7 @@ impl<Endpoint: Debug> SendReliably<Endpoint> {
     }
 }
 
-#[derive(thiserror_no_std::Error, Debug)]
+#[derive(crate::this_error::ThisError, Debug)]
 pub enum SendFailed {
     #[error("no remote reply after {0} attempts")]
     NoReply(usize),

@@ -61,7 +61,7 @@ pub type FramedWriteError = TransportError;
 /// Generalized errors indicating a range of transport-related issues such as being unable to bind,
 /// disconnections from remote peers, malformed input, etc.  Most of these errors are non-fatal
 /// and the server can happily continue serving other customers.
-#[derive(thiserror_no_std::Error, Debug)]
+#[derive(crate::this_error::ThisError, Debug)]
 pub enum TransportError {
     #[error("generic I/O error")]
     IoError(#[from] Option<IoError>),

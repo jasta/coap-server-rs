@@ -125,7 +125,7 @@ where
 
 /// Fatal error preventing the server from starting or continuing.  Typically the result of
 /// programmer error or misconfiguration.
-#[derive(thiserror_no_std::Error, Debug)]
+#[derive(crate::this_error::ThisError, Debug)]
 pub enum FatalServerError {
     /// Programmer error within this crate, file a bug!
     #[error("internal error: {0}")]
